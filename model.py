@@ -10,6 +10,30 @@ import tensorflow as tf
 import numpy as np
 from scipy import interp
 import pandas as pd
+import argparse
+
+def arg_parser():
+    parser = argparse.ArgumentParser(description='Enter Argument for model')
+
+    # training flag
+    parser.add_argument('--training', type = lambda x: (str(x).lower() == 'true'), default = True)
+
+    # add position for saving
+    parser.add_argument("--model", type=str, default = 'baseline.h5')
+    parser.add_argument("--output", type=str, default = 'output.csv')
+
+
+    # add model parms:
+    parser.add_argument("--learning_rate", type=float, default = 1e-5)
+    parser.add_argument("--epochs", type=int, default = 20)
+    parser.add_argument("--drop_out", type=float, default = 0.5)
+    parser.add_argument("--batch_size", type=int, default = 32)
+    parser.add_argument("--activation", type=str, default = 'elu')
+
+
+    return parser.parse_args()
+
+args = arg_parser()
 
 def as_keras_metric(method):
     import functools
@@ -166,16 +190,18 @@ if __name__ == "__main__":
     
     model = XRAY_model(keras.applications.VGG16, 
                         preprocess_func = keras.applications.vgg16.preprocess_input,
-                        input_dim = (224,224,3), use_attn = True)
-
-    X_train, y_label, unlabelled = load_train_data()
-
-    model.fit(X_train, y_label)
-
-    model.save_weight()
+                        input_dim = (224,224,3), use_attn = True, learning_rate = args.learning_rate,
+                        epochs = args.epochs, drop_out = args.drop_out, batch_size = args.batch_size, activation = args.activation)
+    
+    if args.training:
+        X_train, y_label, unlabelled = load_train_data()
+        model.fit(X_train, y_label)
+        model.save_weight(args.model)
+    else:
+        model.load_weight(args.model)
 
     test_idxs, output_idx = load_test_idxs()
 
     pred = model.predict(test_idxs)
 
-    output_csv(pred, output_idx)
+    output_csv(pred, output_idx, output_path = args.output)
