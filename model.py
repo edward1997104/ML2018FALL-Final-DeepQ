@@ -5,6 +5,7 @@ from keras.layers import Dense, Activation, Convolution2D, MaxPooling2D, Flatten
 import keras.applications
 import keras.backend as K
 from sklearn.metrics import roc_curve, auc, roc_auc_score
+from sklearn.utils import shuffle
 from dataset import Training_Generator, Testing_Generator, load_train_data, load_test_idxs
 import tensorflow as tf
 import numpy as np
@@ -125,6 +126,7 @@ class XRAY_model():
 
         # fit the data
         print ("Start Training model")
+        x, y = shuffle(x, y)
         test_idx = int(len(x) * validation_ratio)
         X_train, y_train, X_test, y_test = x[test_idx:], y[test_idx:], x[:test_idx], y[:test_idx]
         training_gen = Training_Generator(X_train, y_train, self.batch_size, reshaped_size = self.input_dim[:-1])
