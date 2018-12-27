@@ -57,10 +57,11 @@ class roc_auc_callback(Callback):
         for i in range(self.training_gen.__len__()):
             self.x, label = self.training_gen.__getitem__(i)
             pred = self.model.predict(self.x, verbose=0)
-            print(y_pred, pred)
-            y_pred = np.concatenate((y_pred, pred), axis = 0)
+            if len(y_pred) != 0:
+                y_pred = np.concatenate((y_pred, pred), axis = 0)
+            else:
+                y_pred = pred
             self.y = np.concatenate((self.y, label))
-        print(y_pred.shape, self.y.shape)
         roc = roc_auc_score(self.y, y_pred, average = "macro")
         logs['roc_auc'] = roc_auc_score(self.y, y_pred, average = "macro")
         logs['norm_gini'] = ( roc_auc_score(self.y, y_pred, average = "macro") * 2 ) - 1
@@ -69,7 +70,11 @@ class roc_auc_callback(Callback):
         self.y_val = []
         for i in range(self.validation_gen.__len__()):
             self.x_val, label_val = self.validation_gen.__getitem__(i)
-            y_pred_val = np.concatenate((y_pred_val, self.model.predict(self.x_val, verbose=0)), axis = 0)
+            pred = self.model.predict(self.x_val, verbose=0)
+            if len(y_pred_val) != 0:
+                y_pred_val = np.concatenate((y_pred_val, pred), axis = 0)
+            else:
+                y_pred_val = pred
             self.y_val = np.concatenate((self.y_val, label_val))
         print(y_pred_val.shape, self.y_val.shape)
  
