@@ -59,10 +59,10 @@ class roc_auc_callback(Callback):
             pred = self.model.predict(self.x, verbose=0)
             if len(y_pred) != 0:
                 y_pred = np.concatenate((y_pred, pred), axis = 0)
-                self.y = label
+                self.y = np.concatenate((self.y, label))
             else:
                 y_pred = pred
-                self.y = np.concatenate((self.y, label))
+                self.y = label
         roc = roc_auc_score(self.y, y_pred, average = "macro")
         logs['roc_auc'] = roc_auc_score(self.y, y_pred, average = "macro")
         logs['norm_gini'] = ( roc_auc_score(self.y, y_pred, average = "macro") * 2 ) - 1
@@ -74,10 +74,10 @@ class roc_auc_callback(Callback):
             pred = self.model.predict(self.x_val, verbose=0)
             if len(y_pred_val) != 0:
                 y_pred_val = np.concatenate((y_pred_val, pred), axis = 0)
-                self.y = label
+                self.y_val = np.concatenate((self.y_val, label_val))
             else:
                 y_pred_val = pred
-                self.y_val = np.concatenate((self.y_val, label_val))
+                self.y = label
  
         roc_val = roc_auc_score(self.y_val, y_pred_val, average = "macro")
         logs['roc_auc_val'] = roc_auc_score(self.y_val, y_pred_val, average = "macro")
