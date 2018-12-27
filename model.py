@@ -12,6 +12,7 @@ import numpy as np
 from scipy import interp
 import pandas as pd
 import argparse
+from keras.callbacks import EarlyStopping, ModelCheckpoint, CSVLogger, Callback
 
 def arg_parser():
     parser = argparse.ArgumentParser(description='Enter Argument for model')
@@ -35,6 +36,53 @@ def arg_parser():
     return parser.parse_args()
 
 args = arg_parser()
+class roc_auc_callback(Callback):
+    def __init__(self,training_data,validation_data):
+        self.training_gen = training_data
+        self.validation_gen = validation_data
+
+    def on_train_begin(self, logs={}):
+        return
+
+    def on_train_end(self, logs={}):
+        return
+
+    def on_epoch_begin(self, epoch, logs={}):
+        return
+
+    def on_epoch_end(self, epoch, logs={}):
+
+        y_pred = []
+        self.y = []
+        for i in range(self.training_gen.__len__()):
+            self.x, label = self.training_gen.__getitem__(i)
+            y_pred = np.concatenate((y_pred, self.model.predict_proba(self.x, verbose=0)), axis = 0)
+            self.y = np.concatenate((self.y, label))
+        print(y_pred.shape, self.y.shape)
+        roc = roc_auc_score(self.y, y_pred, average = "macro")
+        logs['roc_auc'] = roc_auc_score(self.y, y_pred, average = "macro")
+        logs['norm_gini'] = ( roc_auc_score(self.y, y_pred, average = "macro") * 2 ) - 1
+
+        y_pred_val = []
+        self.y_val = []
+        for i in range(self.validation_gen.__len__()):
+            self.x_val, label_val = self.validation_gen.__getitem__(i)
+            y_pred_val = np.concatenate((y_pred_val, self.model.predict_proba(self.x_val, verbose=0)), axis = 0)
+            self.y_val = np.concatenate((self.y_val, label_val))
+        print(y_pred_val.shape, self.y_val.shape)
+ 
+        roc_val = roc_auc_score(self.y_val, y_pred_val, average = "macro")
+        logs['roc_auc_val'] = roc_auc_score(self.y_val, y_pred_val, average = "macro")
+        logs['norm_gini_val'] = ( roc_auc_score(self.y_val, y_pred_val, average = "macro") * 2 ) - 1
+
+        print('\rroc_auc: %s - roc_auc_val: %s - norm_gini: %s - norm_gini_val: %s' % (str(round(roc,5)),str(round(roc_val,5)),str(round((roc*2-1),5)),str(round((roc_val*2-1),5))), end=10*' '+'\n')
+        return
+
+    def on_batch_begin(self, batch, logs={}):
+        return
+
+    def on_batch_end(self, batch, logs={}):
+        return
 
 def as_keras_metric(method):
     import functools
@@ -131,9 +179,11 @@ class XRAY_model():
         X_train, y_train, X_test, y_test = x[test_idx:], y[test_idx:], x[:test_idx], y[:test_idx]
         training_gen = Training_Generator(X_train, y_train, self.batch_size, reshaped_size = self.input_dim[:-1])
         validation_gen = Training_Generator(X_test, y_test, self.batch_size, reshaped_size = self.input_dim[:-1])
+        callbacks = [roc_auc_callback(training_gen, validation_gen)]
+
         hist = self.model.fit_generator(
             training_gen,
-            validation_data = validation_gen, epochs = self.epochs)
+            validation_data = validation_gen, epochs = self.epochs, callbacks = callbacks)
         
         print ("Done Training model")
         print ("AVG AUC:", self.score(X_test, y_test))
