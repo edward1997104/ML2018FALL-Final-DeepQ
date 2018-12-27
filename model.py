@@ -52,21 +52,6 @@ class roc_auc_callback(Callback):
 
     def on_epoch_end(self, epoch, logs={}):
 
-        y_pred = []
-        self.y = []
-        for i in range(self.training_gen.__len__()):
-            self.x, label = self.training_gen.__getitem__(i)
-            pred = self.model.predict(self.x, verbose=0)
-            if len(y_pred) != 0:
-                y_pred = np.concatenate((y_pred, pred), axis = 0)
-                self.y = np.concatenate((self.y, label))
-            else:
-                y_pred = pred
-                self.y = label
-        roc = roc_auc_score(self.y, y_pred, average = "macro")
-        logs['roc_auc'] = roc_auc_score(self.y, y_pred, average = "macro")
-        logs['norm_gini'] = ( roc_auc_score(self.y, y_pred, average = "macro") * 2 ) - 1
-
         y_pred_val = []
         self.y_val = []
         for i in range(self.validation_gen.__len__()):
@@ -77,13 +62,13 @@ class roc_auc_callback(Callback):
                 self.y_val = np.concatenate((self.y_val, label_val))
             else:
                 y_pred_val = pred
-                self.y = label
+                self.y_val = label_val
  
         roc_val = roc_auc_score(self.y_val, y_pred_val, average = "macro")
         logs['roc_auc_val'] = roc_auc_score(self.y_val, y_pred_val, average = "macro")
         logs['norm_gini_val'] = ( roc_auc_score(self.y_val, y_pred_val, average = "macro") * 2 ) - 1
 
-        print('\rroc_auc: %s - roc_auc_val: %s - norm_gini: %s - norm_gini_val: %s' % (str(round(roc,5)),str(round(roc_val,5)),str(round((roc*2-1),5)),str(round((roc_val*2-1),5))), end=10*' '+'\n')
+        print('\rroc_auc_val: %s - norm_gini_val: %s' % (str(round(roc_val,5)),str(round((roc_val*2-1),5))), end=10*' '+'\n')
         return
 
     def on_batch_begin(self, batch, logs={}):
