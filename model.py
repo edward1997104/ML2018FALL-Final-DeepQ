@@ -7,7 +7,7 @@ import keras.applications
 import keras.backend as K
 from sklearn.metrics import roc_curve, auc, roc_auc_score
 from sklearn.utils import shuffle
-from dataset import Training_Generator, Testing_Generator, load_train_data, load_test_idxs, split_dataset
+from dataset import Training_Generator, Testing_Generator, load_train_data, load_test_idxs, split_dataset, reweight_sample
 import tensorflow as tf
 import numpy as np
 from scipy import interp
@@ -20,7 +20,7 @@ def arg_parser():
 
     # training flag
     parser.add_argument('--training', type = lambda x: (str(x).lower() == 'true'), default = True)
-
+    parser.add_argument('--reweight', type = lambda x: (str(x).lower() == 'true'), default = False)
     # add position for saving
     parser.add_argument("--model", type=str, default = 'baseline.h5')
     parser.add_argument("--output", type=str, default = 'output.csv')
@@ -99,7 +99,7 @@ class XRAY_model():
     
     def __init__(self, MODEL, preprocess_func = None, use_attn = True, input_dim = (150, 150, 3),
      output_dim = 14, learning_rate = 0.00001, epochs = 20, drop_out = 0.5, batch_size = 32, activation = 'elu',
-     fine_tune = True, kernel_l2 = 0.01):
+     fine_tune = True, kernel_l2 = 0.01, reweight = False):
 
         # parms:
         self.input_dim = input_dim
@@ -108,6 +108,7 @@ class XRAY_model():
         self.epochs = epochs
         self.drop_out = drop_out
         self.batch_size = batch_size
+        self.reweight = reweight
 
 
         inputs = Input(shape = input_dim)
@@ -174,8 +175,11 @@ class XRAY_model():
         # fit the data
         print ("Start Training model")
         X_train, y_label, _, label_to_imgs, img_flag = load_train_data()
-        test_idx = int(len(X_train) * validation_ratio)
-        X_train, y_train, X_test, y_test = X_train[test_idx:], y_label[test_idx:], X_train[:test_idx], y_label[:test_idx]
+        train_ids, test_ids = split_dataset(y_label, label_to_imgs, img_flag, test_ration=validation_ratio)
+        X_train, y_train, X_test, y_test = [X_train[train_id] for train_id in train_ids], y_label[train_ids],\
+                                            [ X_train[test_id] for test_id in test_ids], y_label[test_ids]
+        if reweight_sample:
+            X_train, y_train = reweight_sample(X_train, y_train, per_class = 1000)
         training_gen = Training_Generator(X_train, y_train, self.batch_size, reshaped_size = self.input_dim[:-1])
         validation_gen = Training_Generator(X_test, y_test, self.batch_size, reshaped_size = self.input_dim[:-1])
         callbacks = [roc_auc_callback(training_gen, validation_gen),
