@@ -1,5 +1,6 @@
 from keras.models import Sequential, load_model
 from keras.models import Model
+from keras import regularizers
 from keras.preprocessing.image import ImageDataGenerator
 from keras.layers import Dense, Activation, Convolution2D, MaxPooling2D, Flatten, InputLayer, LeakyReLU, BatchNormalization, Dropout, GlobalAveragePooling2D, Input, Conv2D, AvgPool2D, multiply, Lambda
 import keras.applications
@@ -31,6 +32,9 @@ def arg_parser():
     parser.add_argument("--drop_out", type=float, default = 0.5)
     parser.add_argument("--batch_size", type=int, default = 32)
     parser.add_argument("--activation", type=str, default = 'elu')
+    parser.add_argument("--validation_ratio", type=float, default = 0.1)
+    parser.add_argument("--fine_tune", type = lambda x: (str(x).lower() == 'true'), default = False)
+    parser.add_argument("--kernel_l2", type = float, default = 0.01)
 
 
     return parser.parse_args()
@@ -93,7 +97,9 @@ def as_keras_metric(method):
 
 class XRAY_model():
     
-    def __init__(self, MODEL, preprocess_func = None, use_attn = True, input_dim = (150, 150, 3), output_dim = 14, learning_rate = 0.00001, epochs = 20, drop_out = 0.5, batch_size = 32, activation = 'elu'):
+    def __init__(self, MODEL, preprocess_func = None, use_attn = True, input_dim = (150, 150, 3),
+     output_dim = 14, learning_rate = 0.00001, epochs = 20, drop_out = 0.5, batch_size = 32, activation = 'elu',
+     fine_tune = True, kernel_l2 = 0.01):
 
         # parms:
         self.input_dim = input_dim
@@ -113,7 +119,7 @@ class XRAY_model():
         pretrained_model = MODEL(weights='imagenet', include_top=False, input_shape = self.input_dim)
         
         # freeze the weights first
-        pretrained_model.trainable = False
+        pretrained_model.trainable = fine_tune
 
         model_output = pretrained_model(processed_inputs)
 
@@ -143,9 +149,9 @@ class XRAY_model():
         
         # Dense Layers
         output = Dropout(self.drop_out) (model_output)
-        output = Dense(128, activation = activation)(output)
+        output = Dense(128, activation = activation, kernel_regularizer=regularizers.l2(kernel_l2))(output)
         output = Dropout(self.drop_out) (output)
-        output = Dense(self.output_dim, activation = 'sigmoid') (output)
+        output = Dense(self.output_dim, activation = 'sigmoid', kernel_regularizer=regularizers.l2(kernel_l2)) (output)
 
 
         auc_roc = as_keras_metric(tf.metrics.auc)
@@ -168,9 +174,8 @@ class XRAY_model():
         # fit the data
         print ("Start Training model")
         X_train, y_label, _, label_to_imgs, img_flag = load_train_data()
-        train_ids, test_ids = split_dataset(y_label, label_to_imgs, img_flag, test_ration=validation_ratio)
-        X_train, y_train, X_test, y_test = [X_train[train_id] for train_id in train_ids], y_label[train_ids],\
-                                            [ X_train[test_id] for test_id in test_ids], y_label[test_ids]
+        test_idx = int(len(X_train) * validation_ratio)
+        X_train, y_train, X_test, y_test = X_train[test_idx:], y_label[test_idx:], X_train[:test_idx], y_label[:test_idx]
         training_gen = Training_Generator(X_train, y_train, self.batch_size, reshaped_size = self.input_dim[:-1])
         validation_gen = Training_Generator(X_test, y_test, self.batch_size, reshaped_size = self.input_dim[:-1])
         callbacks = [roc_auc_callback(training_gen, validation_gen),
@@ -238,10 +243,11 @@ if __name__ == "__main__":
     model = XRAY_model(keras.applications.VGG16, 
                         preprocess_func = keras.applications.vgg16.preprocess_input,
                         input_dim = (224,224,3), use_attn = True, learning_rate = args.learning_rate,
-                        epochs = args.epochs, drop_out = args.drop_out, batch_size = args.batch_size, activation = args.activation)
+                        epochs = args.epochs, drop_out = args.drop_out, batch_size = args.batch_size,
+                        activation = args.activation, fine_tune = args.fine_tune, kernel_l2 = args.kernel_l2)
     
     if args.training:
-        model.fit()
+        model.fit(validation_ratio = args.validation_ratio)
         model.save_weight(args.model)
     else:
         model.load_weight(args.model)
