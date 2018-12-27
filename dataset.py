@@ -67,8 +67,21 @@ def load_train_data(train_img_folder = './data/data/images/', path = './data/ntu
     
     print("Done Training Images and Labels")
     label_img, labels_res, unlabel_img = label_img, np.array(labels_res), unlabel_img
+    
+    
+    labeled_img_idx, labeled_patient,  labeled_patient_id = \
+        train_df['Image Index'][:10001], train_df['Labels'][:10001], train_df['Patient ID'][:10001]
+    
+    label_to_imgs = { i: [] for i in range(14)}
+    img_flag = {}
 
-    return label_img, labels_res, unlabel_img
+    for i in range(10001):
+        labels = labels_res[i].nonzero()[0]
+        for label in labels:
+            label_to_imgs[label].append(labeled_img_idx[i])
+        img_flag[labeled_img_idx[i]] = [False, i]
+
+    return label_img, labels_res, unlabel_img, label_to_imgs, img_flag
     
 
 def reweight_sample(image_filenames, labels, per_class = 2000):
@@ -102,6 +115,45 @@ def reweight_sample(image_filenames, labels, per_class = 2000):
     # p = np.random.permutation(result_filenames)
     return result_filenames, np.array(result_labels)
 
+def split_dataset(y_label, label_to_imgs, img_flag, test_ration = 0.15):
+    distribution = dist(y_label)
+    test_size = list(map(lambda x: int(x*test_ration), distribution))
+    retrieve_seq = np.argsort(test_size)
+    print(test_size)
+    print(retrieve_seq)
+    test_ids = []
+    for label in retrieve_seq:
+        for i in range(test_size[label]):
+            img_name, flag = get_img_flag(label, label_to_imgs, img_flag)
+            if img_name == None:
+                print(len(test_ids), label)
+                break
+            img_flag[img_name][0] = True 
+            test_ids.append(flag[1])
+            
+    train_ids = []
+    for flag in img_flag:
+        if img_flag[flag][0] == False:
+            train_ids.append(img_flag[flag][1])
+    
+    return train_ids, test_ids
+            
+    
+def get_img_flag(target_label, label_to_imgs, img_flag):
+    for i in label_to_imgs[target_label]:
+        if img_flag[i][0] == False:
+            return i, img_flag[i]
+    return None, None
+
+def dist(y_label):
+    stat = [list(y.nonzero()[0])  for y in y_label]
+    tmp = list(filter(lambda x: x!= [], stat))
+    freq = [0]*14
+    for i in tmp:
+        for index in i:
+            freq[index] += 1
+    
+    return freq
 
 def load_test_idxs(path = './data/ntu_final_2018/test.csv', test_img_folder = './data/data/images/'):
     
@@ -119,10 +171,11 @@ def show_img(arr):
     plt.imshow(arr, cmap=plt.get_cmap('gray'))
 
 if __name__ == '__main__':
-    X_train, y_label, unlabelled = load_train_data()
+    X_train, y_label, unlabelled, label_to_imgs, img_flag = load_train_data()
+    train_ids, test_ids = split_dataset(y_label, label_to_imgs, img_flag, test_ration=0.20)
 
-    X_train, y_label = reweight_sample(X_train, y_label)
+#    X_train, y_label = reweight_sample(X_train, y_label)
 
-    positive_ratio = np.sum(y_label, axis = 0) / len(y_label)
-    print(positive_ratio)
+#    positive_ratio = np.sum(y_label, axis = 0) / len(y_label)
+#    print(positive_ratio)
     pass

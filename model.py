@@ -6,7 +6,7 @@ import keras.applications
 import keras.backend as K
 from sklearn.metrics import roc_curve, auc, roc_auc_score
 from sklearn.utils import shuffle
-from dataset import Training_Generator, Testing_Generator, load_train_data, load_test_idxs
+from dataset import Training_Generator, Testing_Generator, load_train_data, load_test_idxs, split_dataset
 import tensorflow as tf
 import numpy as np
 from scipy import interp
@@ -163,13 +163,14 @@ class XRAY_model():
 
 
         
-    def fit(self, x, y, validation_ratio = 0.1):
+    def fit(self, validation_ratio = 0.1):
 
         # fit the data
         print ("Start Training model")
-        x, y = shuffle(x, y)
-        test_idx = int(len(x) * validation_ratio)
-        X_train, y_train, X_test, y_test = x[test_idx:], y[test_idx:], x[:test_idx], y[:test_idx]
+        X_train, y_label, _, label_to_imgs, img_flag = load_train_data()
+        train_ids, test_ids = split_dataset(y_label, label_to_imgs, img_flag, test_ration=validation_ratio)
+        X_train, y_train, X_test, y_test = [X_train[train_id] for train_id in train_ids], y_label[train_ids],\
+                                            [ X_train[test_id] for test_id in test_ids], y_label[test_ids]
         training_gen = Training_Generator(X_train, y_train, self.batch_size, reshaped_size = self.input_dim[:-1])
         validation_gen = Training_Generator(X_test, y_test, self.batch_size, reshaped_size = self.input_dim[:-1])
         callbacks = [roc_auc_callback(training_gen, validation_gen),
@@ -240,8 +241,7 @@ if __name__ == "__main__":
                         epochs = args.epochs, drop_out = args.drop_out, batch_size = args.batch_size, activation = args.activation)
     
     if args.training:
-        X_train, y_label, unlabelled = load_train_data()
-        model.fit(X_train, y_label)
+        model.fit()
         model.save_weight(args.model)
     else:
         model.load_weight(args.model)
