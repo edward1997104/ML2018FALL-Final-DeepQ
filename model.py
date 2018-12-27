@@ -56,7 +56,9 @@ class roc_auc_callback(Callback):
         self.y = []
         for i in range(self.training_gen.__len__()):
             self.x, label = self.training_gen.__getitem__(i)
-            y_pred = np.concatenate((y_pred, self.model.predict(self.x, verbose=0)), axis = 0)
+            pred = self.model.predict(self.x, verbose=0)
+            print(y_pred, pred)
+            y_pred = np.concatenate((y_pred, pred), axis = 0)
             self.y = np.concatenate((self.y, label))
         print(y_pred.shape, self.y.shape)
         roc = roc_auc_score(self.y, y_pred, average = "macro")
