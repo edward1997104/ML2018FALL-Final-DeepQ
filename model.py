@@ -158,14 +158,16 @@ class XRAY_model():
         auc_roc = as_keras_metric(tf.metrics.auc)
         recall = as_keras_metric(tf.metrics.recall)
         precision = as_keras_metric(tf.metrics.precision)
-        f1_measure = as_keras_metric(tf.contrib.metrics.f1_score)
+        # f1_measure = as_keras_metric(tf.contrib.metrics.f1_score)
 
 
         # Build Model
         self.model = Model(inputs = [inputs], outputs = [output])
 
         self.model.compile(optimizer = 'adam', loss = 'binary_crossentropy',
-                           metrics = ['binary_accuracy', 'mae', auc_roc, recall, precision, f1_measure])
+                           metrics = ['binary_accuracy', 'mae', auc_roc, recall, precision 
+                        #    f1_measure
+                           ])
         self.model.summary()
 
 
@@ -178,7 +180,7 @@ class XRAY_model():
         train_ids, test_ids = split_dataset(y_label, label_to_imgs, img_flag, test_ration=validation_ratio)
         X_train, y_train, X_test, y_test = [X_train[train_id] for train_id in train_ids], y_label[train_ids],\
                                             [ X_train[test_id] for test_id in test_ids], y_label[test_ids]
-        if reweight_sample:
+        if self.reweight:
             X_train, y_train = reweight_sample(X_train, y_train, per_class = 1000)
         training_gen = Training_Generator(X_train, y_train, self.batch_size, reshaped_size = self.input_dim[:-1])
         validation_gen = Training_Generator(X_test, y_test, self.batch_size, reshaped_size = self.input_dim[:-1])
