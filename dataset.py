@@ -26,7 +26,7 @@ class Training_Generator(Sequence):
         batch_y = self.labels[idx * self.batch_size:(idx + 1) * self.batch_size]
 
         return np.array([
-            cv2.resize(cv2.imread(file_name), dsize = self.reshaped_size)
+            cv2.resize(cv2.imread(file_name), dsize = self.reshaped_size)[:,:,::-1]
                for file_name in batch_x]), np.array(batch_y)
 
 class Testing_Generator(Sequence):
@@ -43,7 +43,7 @@ class Testing_Generator(Sequence):
         batch_x = self.image_filenames[idx * self.batch_size:(idx + 1) * self.batch_size]
 
         return np.array([
-            cv2.resize(cv2.imread(file_name), dsize = self.reshaped_size)
+            cv2.resize(cv2.imread(file_name), dsize = self.reshaped_size)[:,:,::-1]
                for file_name in batch_x])
 
 def load_train_data(train_img_folder = './data/data/images/', path = './data/ntu_final_2018/train.csv'):
