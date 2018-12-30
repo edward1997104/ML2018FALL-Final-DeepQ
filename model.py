@@ -28,6 +28,7 @@ def arg_parser():
 
 
     # add model parms:
+    parser.add_argument("--connected_layers", type = int, default = -1)
     parser.add_argument("--learning_rate", type=float, default = 1e-5)
     parser.add_argument("--epochs", type=int, default = 20)
     parser.add_argument("--drop_out", type=float, default = 0.5)
@@ -126,12 +127,13 @@ class XRAY_model():
         if model_weight == 'None':
             model_weight = None
 
-        pretrained_model = MODEL(weights= model_weight, include_top=False, input_shape = self.input_dim)
+        pretrained_model = MODEL(input_tensor = processed_inputs, weights= model_weight, include_top=False, input_shape = self.input_dim)
         
         # freeze the weights first
         pretrained_model.trainable = fine_tune or (model_weight == None)
 
-        model_output = pretrained_model(processed_inputs)
+        model_output = pretrained_model.layers[args.connected_layers].output
+
 
         if use_attn:
             pt_depth = model_output.shape[-1]
