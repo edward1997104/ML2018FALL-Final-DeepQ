@@ -35,6 +35,7 @@ def arg_parser():
     parser.add_argument("--validation_ratio", type=float, default = 0.1)
     parser.add_argument("--fine_tune", type = lambda x: (str(x).lower() == 'true'), default = False)
     parser.add_argument("--kernel_l2", type = float, default = 0.01)
+    parser.add_argument("--model_weight", type = str, default = 'imagenet')
 
 
     return parser.parse_args()
@@ -99,7 +100,7 @@ class XRAY_model():
     
     def __init__(self, MODEL, preprocess_func = None, use_attn = True, input_dim = (150, 150, 3),
      output_dim = 14, learning_rate = 0.00001, epochs = 20, drop_out = 0.5, batch_size = 32, activation = 'elu',
-     fine_tune = True, kernel_l2 = 0.01, reweight = False):
+     fine_tune = True, kernel_l2 = 0.01, reweight = False, model_weight = 'imagenet'):
 
         # parms:
         self.input_dim = input_dim
@@ -116,11 +117,14 @@ class XRAY_model():
 
         if preprocess_func:
             processed_inputs = Lambda(preprocess_func) (processed_inputs)
+        
+        if model_weight == 'None':
+            model_weight = None
 
-        pretrained_model = MODEL(weights='imagenet', include_top=False, input_shape = self.input_dim)
+        pretrained_model = MODEL(weights= model_weight, include_top=False, input_shape = self.input_dim)
         
         # freeze the weights first
-        pretrained_model.trainable = fine_tune
+        pretrained_model.trainable = fine_tune or (model_weight == None)
 
         model_output = pretrained_model(processed_inputs)
 
@@ -250,7 +254,8 @@ if __name__ == "__main__":
                         preprocess_func = keras.applications.vgg16.preprocess_input,
                         input_dim = (224,224,3), use_attn = True, learning_rate = args.learning_rate,
                         epochs = args.epochs, drop_out = args.drop_out, batch_size = args.batch_size,
-                        activation = args.activation, fine_tune = args.fine_tune, kernel_l2 = args.kernel_l2)
+                        activation = args.activation, fine_tune = args.fine_tune, kernel_l2 = args.kernel_l2,
+                        model_weight = args.model_weight)
     
     if args.training:
         model.fit(validation_ratio = args.validation_ratio)
