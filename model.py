@@ -132,6 +132,9 @@ class XRAY_model():
         # freeze the weights first
         pretrained_model.trainable = fine_tune or (model_weight == None)
 
+        for layer in pretrained_model.layers:
+            layer.trainable = fine_tune
+
         model_output = pretrained_model.layers[args.connected_layers].output
 
 
