@@ -21,7 +21,7 @@ def arg_parser():
     # training flag
     parser.add_argument('--training', type = lambda x: (str(x).lower() == 'true'), default = True)
     parser.add_argument('--reweight', type = lambda x: (str(x).lower() == 'true'), default = False)
-
+    parser.add_argument('--model_type', type = str, default = 'vgg16')
     # add position for saving
     parser.add_argument("--model", type=str, default = 'baseline.h5')
     parser.add_argument("--output", type=str, default = 'output.csv')
@@ -256,8 +256,14 @@ def output_csv(pred, idx, disease_path = './data/ntu_final_2018/classname.txt', 
 
 if __name__ == "__main__":
     
-    model = XRAY_model(keras.applications.VGG16, 
-                        preprocess_func = keras.applications.vgg16.preprocess_input,
+    if args.model_type == 'vgg16':
+        used_model = keras.applications.VGG16
+        preprocess_func = keras.applications.vgg16.preprocess_input
+    elif args.model_type == 'densenet121':
+        used_model = keras.applications.DenseNet121
+        preprocess_func = keras.applications.densenet.preprocess_input
+    model = XRAY_model(used_model,
+                        preprocess_func = preprocess_func,
                         input_dim = (224,224,3), use_attn = True, learning_rate = args.learning_rate,
                         epochs = args.epochs, drop_out = args.drop_out, batch_size = args.batch_size,
                         activation = args.activation, fine_tune = args.fine_tune, kernel_l2 = args.kernel_l2,
