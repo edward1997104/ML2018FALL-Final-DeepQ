@@ -21,6 +21,7 @@ def arg_parser():
     # training flag
     parser.add_argument('--training', type = lambda x: (str(x).lower() == 'true'), default = True)
     parser.add_argument('--reweight', type = lambda x: (str(x).lower() == 'true'), default = False)
+
     # add position for saving
     parser.add_argument("--model", type=str, default = 'baseline.h5')
     parser.add_argument("--output", type=str, default = 'output.csv')
@@ -36,6 +37,10 @@ def arg_parser():
     parser.add_argument("--fine_tune", type = lambda x: (str(x).lower() == 'true'), default = False)
     parser.add_argument("--kernel_l2", type = float, default = 0.01)
     parser.add_argument("--model_weight", type = str, default = 'imagenet')
+
+    # early stopper:
+    parser.add_argument("--patience", type = int, default = 5)
+
 
 
     return parser.parse_args()
@@ -189,7 +194,8 @@ class XRAY_model():
         training_gen = Training_Generator(X_train, y_train, self.batch_size, reshaped_size = self.input_dim[:-1])
         validation_gen = Training_Generator(X_test, y_test, self.batch_size, reshaped_size = self.input_dim[:-1])
         callbacks = [roc_auc_callback(training_gen, validation_gen),
-                    EarlyStopping(monitor='roc_auc_val', mode='max', verbose=1)]
+                    EarlyStopping(monitor='roc_auc_val', mode='max', verbose=1,
+                    patience = args.patience, restore_best_weights = True)]
 
         hist = self.model.fit_generator(
             training_gen,
