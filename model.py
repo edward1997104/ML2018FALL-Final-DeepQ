@@ -187,10 +187,14 @@ class XRAY_model():
 
         # fit the data
         print ("Start Training model")
-        X_train, y_label, _, label_to_imgs, img_flag = load_train_data()
-        train_ids, test_ids = split_dataset(y_label, label_to_imgs, img_flag, test_ration=validation_ratio)
-        X_train, y_train, X_test, y_test = [X_train[train_id] for train_id in train_ids], y_label[train_ids],\
-                                            [ X_train[test_id] for test_id in test_ids], y_label[test_ids]
+        X_train, y_label, _, _, _ = load_train_data()
+        X_train, y_label = shuffle(X_train, y_label)
+        test_id = int(len(X_train) * validation_ratio)
+        X_train, y_train, X_test, y_test = X_train[:-test_id], y_label[:-test_id], X_train[-test_id:], y_label[-test_id:]
+        # train_ids, test_ids = split_dataset(y_label, label_to_imgs, img_flag, test_ration=validation_ratio)
+        # X_train, y_train, X_test, y_test = [X_train[train_id] for train_id in train_ids], y_label[train_ids],\
+        #                                     [ X_train[test_id] for test_id in test_ids], y_label[test_ids]
+        
         if self.reweight:
             X_train, y_train = reweight_sample(X_train, y_train, per_class = 1000)
         training_gen = Training_Generator(X_train, y_train, self.batch_size, reshaped_size = self.input_dim[:-1])
