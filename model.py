@@ -184,9 +184,10 @@ class XRAY_model():
             predict_model = Model(inputs = inputs, outputs = label_pred)
             predict_model.compile(optimizer = 'adam', loss = 'sparse_categorical_crossentropy')
 
+            print('Starting Unsupervised Training......')
             # training process
             for i in range(args.deep_clustering_epochs):
-                input_features = clustering_model.predict_generator(input_gen)
+                input_features = clustering_model.predict_generator(input_gen, verbose = 1)
                 input_features = preprocess_features(input_features)
 
                 labels, loss = run_kmeans(input_features, args.deep_clustering_nums)
@@ -196,7 +197,8 @@ class XRAY_model():
                 predict_model.fit_generator(clustering_gen)
 
                 print('epoch %d clustering loss: %lf' % (i, loss))
-        
+            
+            print('Done Unsupervised Training......')
         for layer in pretrained_model.layers:
             layer.trainable = fine_tune
         
@@ -307,7 +309,7 @@ def run_kmeans(x, nmb_clusters, verbose = True):
     if verbose:
         print('k-means loss evolution: {0}'.format(losses))
 
-    return [int(n[0]) for n in I], losses[-1]
+    return np.array([int(n[0]) for n in I]), losses[-1]
 
 def preprocess_features(npdata, pca=256):
     """Preprocess an array of features.
