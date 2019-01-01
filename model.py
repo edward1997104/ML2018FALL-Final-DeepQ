@@ -180,7 +180,7 @@ class XRAY_model():
             clustering_model = Model(inputs = inputs, outputs = model_output)
 
             # Define label prediction model
-            label_pred = Dense(model_output, args.deep_clustering_nums)
+            label_pred = Dense(args.deep_clustering_nums) (model_output)
             predict_model = Model(inputs = inputs, outputs = label_pred)
             predict_model.compile(optimizer = 'adam', loss = 'sparse_categorical_crossentropy')
 
