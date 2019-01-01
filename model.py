@@ -190,7 +190,7 @@ class XRAY_model():
             # training process
             for i in range(args.deep_clustering_epochs):
                 input_features = clustering_model.predict_generator(input_gen, verbose = 1)
-                input_features = preprocess_features(input_features)
+                # input_features = preprocess_features(input_features)
 
                 labels, loss = run_kmeans(input_features, args.deep_clustering_nums)
                 clustering_gen = Training_Generator(X_train + unlabel_data, labels,
