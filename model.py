@@ -138,9 +138,6 @@ class XRAY_model():
         # freeze the weights first
         pretrained_model.trainable = fine_tune or (model_weight == None)
 
-        for layer in pretrained_model.layers:
-            layer.trainable = fine_tune
-
         model_output = pretrained_model.layers[args.connected_layers].output
 
 
@@ -170,6 +167,10 @@ class XRAY_model():
         
         if args.deep_clustering:
 
+            # allow layers trainable
+            for layer in pretrained_model.layers:
+                layer.trainable = True
+            
             # load data
             X_train, _, unlabel_data, _, _ = load_train_data()
             input_gen = Testing_Generator(X_train + unlabel_data, batch_size = 32, reshaped_size = input_dim)
@@ -195,8 +196,10 @@ class XRAY_model():
                 predict_model.fit_generator(clustering_gen)
 
                 print('epoch %d clustering loss: %lf' % (i, loss))
-
-
+        
+        for layer in pretrained_model.layers:
+            layer.trainable = fine_tune
+        
         # Dense Layers
         output = Dropout(self.drop_out) (model_output)
         output = Dense(128, activation = activation, kernel_regularizer=regularizers.l2(kernel_l2))(output)
