@@ -22,6 +22,12 @@ def arg_parser():
     parser.add_argument('--training', type = lambda x: (str(x).lower() == 'true'), default = True)
     parser.add_argument('--reweight', type = lambda x: (str(x).lower() == 'true'), default = False)
     parser.add_argument('--model_type', type = str, default = 'vgg16')
+    parser.add_argument('--deep_clustering', type = lambda x: (str(x).lower() == 'true'), default = False)
+
+    # deep clustering epochs
+    parser.add_argument('--deep_clustering_epochs', type = int, default = 200)
+    parser.add_argument('--deep_clustering_nums', type = int, default = 14)
+
     # add position for saving
     parser.add_argument("--model", type=str, default = 'baseline.h5')
     parser.add_argument("--output", type=str, default = 'output.csv')
@@ -162,6 +168,35 @@ class XRAY_model():
         else:
             model_output = GlobalAveragePooling2D()(model_output)
         
+        if args.deep_clustering:
+
+            # load data
+            X_train, _, unlabel_data, _, _ = load_train_data()
+            input_gen = Testing_Generator(X_train + unlabel_data, batch_size = 32, reshaped_size = input_dim)
+
+
+            # Define clustering
+            clustering_model = Model(inputs = inputs, outputs = model_output)
+
+            # Define label prediction model
+            label_pred = Dense(model_output, args.deep_clustering_nums)
+            predict_model = Model(inputs = inputs, outputs = label_pred)
+            predict_model.compile(optimizer = 'adam', loss = 'sparse_categorical_crossentropy')
+
+            # training process
+            for i in range(args.deep_clustering_epochs):
+                input_features = clustering_model.predict_generator(input_gen)
+                input_features = preprocess_features(input_features)
+
+                labels, loss = run_kmeans(input_features, args.deep_clustering_nums)
+                clustering_gen = Training_Generator(X_train + unlabel_data, labels,
+                 self.batch_size, reshaped_size = self.input_dim[:-1])
+
+                predict_model.fit_generator(clustering_gen)
+
+                print('epoch %d clustering loss: %lf' % (i, loss))
+
+
         # Dense Layers
         output = Dropout(self.drop_out) (model_output)
         output = Dense(128, activation = activation, kernel_regularizer=regularizers.l2(kernel_l2))(output)
@@ -239,6 +274,60 @@ class XRAY_model():
         self.model.load_weights(path)
         print ("Done Loading model")
         return
+
+# Borrowd code from Deep Cluster
+
+def run_kmeans(x, nmb_clusters, verbose = True):
+    """Runs kmeans on 1 GPU.
+    Args:
+        x: data
+        nmb_clusters (int): number of clusters
+    Returns:
+        list: ids of data in each cluster
+    """
+    n_data, d = x.shape
+
+    # faiss implementation of k-means
+    clus = faiss.Clustering(d, nmb_clusters)
+    clus.niter = 20
+    clus.max_points_per_centroid = 10000000
+    res = faiss.StandardGpuResources()
+    flat_config = faiss.GpuIndexFlatConfig()
+    flat_config.useFloat16 = False
+    flat_config.device = 0
+    index = faiss.GpuIndexFlatL2(res, d, flat_config)
+
+    # perform the training
+    clus.train(x, index)
+    _, I = index.search(x, 1)
+    losses = faiss.vector_to_array(clus.obj)
+    if verbose:
+        print('k-means loss evolution: {0}'.format(losses))
+
+    return [int(n[0]) for n in I], losses[-1]
+
+def preprocess_features(npdata, pca=256):
+    """Preprocess an array of features.
+    Args:
+        npdata (np.array N * ndim): features to preprocess
+        pca (int): dim of output
+    Returns:
+        np.array of dim N * pca: data PCA-reduced, whitened and L2-normalized
+    """
+    _, ndim = npdata.shape
+    npdata =  npdata.astype('float32')
+
+    # Apply PCA-whitening with Faiss
+    mat = faiss.PCAMatrix (ndim, pca, eigen_power=-0.5)
+    mat.train(npdata)
+    assert mat.is_trained
+    npdata = mat.apply_py(npdata)
+
+    # L2 normalization
+    row_sums = np.linalg.norm(npdata, axis=1)
+    npdata = npdata / row_sums[:, np.newaxis]
+
+    return npdata
 
 def output_csv(pred, idx, disease_path = './data/ntu_final_2018/classname.txt', output_path = './output.csv'):
     
