@@ -173,7 +173,7 @@ class XRAY_model():
             
             # load data
             X_train, _, unlabel_data, _, _ = load_train_data()
-            input_gen = Testing_Generator(X_train + unlabel_data, batch_size = 256,
+            input_gen = Testing_Generator(X_train + unlabel_data, batch_size = 128,
              reshaped_size = self.input_dim[:-1])
 
 
