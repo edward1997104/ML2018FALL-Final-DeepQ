@@ -173,7 +173,8 @@ class XRAY_model():
             
             # load data
             X_train, _, unlabel_data, _, _ = load_train_data()
-            input_gen = Testing_Generator(X_train + unlabel_data, batch_size = 32, reshaped_size = input_dim)
+            input_gen = Testing_Generator(X_train + unlabel_data, batch_size = 32,
+             reshaped_size = self.input_dim[:-1])
 
 
             # Define clustering
