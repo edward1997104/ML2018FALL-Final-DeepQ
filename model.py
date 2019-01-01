@@ -14,6 +14,7 @@ from scipy import interp
 import pandas as pd
 import argparse
 from keras.callbacks import EarlyStopping, ModelCheckpoint, CSVLogger, Callback
+import faiss
 
 def arg_parser():
     parser = argparse.ArgumentParser(description='Enter Argument for model')
