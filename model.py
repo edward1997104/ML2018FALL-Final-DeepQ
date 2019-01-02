@@ -129,7 +129,7 @@ class XRAY_model():
             import tensorflow as tf
             from keras.backend.tensorflow_backend import set_session
             config = tf.ConfigProto()
-            config.gpu_options.per_process_gpu_memory_fraction = 0.5
+            config.gpu_options.per_process_gpu_memory_fraction = 0.7
             set_session(tf.Session(config=config))
 
 
@@ -220,9 +220,11 @@ class XRAY_model():
             clustering_model = Model(inputs = inputs, outputs = model_output)
 
             # Define label prediction model
-            label_pred = Dense(args.deep_clustering_nums) (model_output)
+            hidden = Dense(512, activation = activation)(model_output)
+            label_pred = Dense(args.deep_clustering_nums) (hidden)
             predict_model = Model(inputs = inputs, outputs = label_pred)
             predict_model.compile(optimizer = 'adam', loss = 'sparse_categorical_crossentropy')
+            predict_model.summary()
 
             print('Starting Unsupervised Training......')
             # training process
