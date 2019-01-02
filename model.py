@@ -167,7 +167,8 @@ class XRAY_model():
             model_output = GlobalAveragePooling2D()(model_output)
         
         if args.deep_clustering:
-
+            
+            print('clustering dimension: ', model_output.shape[-1])
             # allow layers trainable
             for layer in pretrained_model.layers:
                 layer.trainable = True
@@ -190,7 +191,8 @@ class XRAY_model():
             # training process
             for i in range(args.deep_clustering_epochs):
                 input_features = clustering_model.predict_generator(input_gen, verbose = 1)
-                # input_features = preprocess_features(input_features)
+                if model_output.shape[-1] > 256:
+                    input_features = preprocess_features(input_features)
 
                 labels, loss = run_kmeans(input_features, args.deep_clustering_nums)
                 clustering_gen = Training_Generator(X_train + unlabel_data, labels,
@@ -206,7 +208,7 @@ class XRAY_model():
         
         # Dense Layers
         output = Dropout(self.drop_out) (model_output)
-        output = Dense(128, activation = activation, kernel_regularizer=regularizers.l2(kernel_l2))(output)
+        output = Dense(512, activation = activation, kernel_regularizer=regularizers.l2(kernel_l2))(output)
         output = Dropout(self.drop_out) (output)
         output = Dense(self.output_dim, activation = 'sigmoid', kernel_regularizer=regularizers.l2(kernel_l2)) (output)
 
