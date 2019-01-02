@@ -188,7 +188,10 @@ class XRAY_model():
             
             result_layers.append(model_output)
         
-        model_output = Concatenate() (result_layers)
+        if len(result_layers) >= 2:
+            model_output = Concatenate() (result_layers)
+        else:
+            model_output = result_layers[0]
 
         
         # Dense Layers
