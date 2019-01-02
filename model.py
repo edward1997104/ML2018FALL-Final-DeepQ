@@ -112,7 +112,7 @@ def as_keras_metric(method):
 
 class XRAY_model():
     
-    def __init__(self, MODEL, preprocess_func = None, use_attn = True, input_dim = (150, 150, 3),
+    def __init__(self, model_type_list, preprocess_func_list = None, use_attn = True, input_dim = (150, 150, 3),
      output_dim = 14, learning_rate = 0.00001, epochs = 20, drop_out = 0.5, batch_size = 32, activation = 'elu',
      fine_tune = True, kernel_l2 = 0.01, reweight = False, model_weight = 'imagenet'):
 
@@ -134,7 +134,6 @@ class XRAY_model():
 
 
         inputs = Input(shape = input_dim)
-        processed_inputs = inputs
 
         
         if model_weight == 'None':
@@ -143,11 +142,13 @@ class XRAY_model():
         # for each model
         result_layers = []
 
-        for model_type, preprocess_func in zip(MODEL, preprocess_func):
+        for model_type, preprocess_func in zip(model_type_list, preprocess_func_list):
 
+            processed_inputs = inputs
             if preprocess_func:
                 processed_inputs = Lambda(preprocess_func) (processed_inputs)
-            pretrained_model = MODEL(input_tensor = processed_inputs, weights= model_weight,
+
+            pretrained_model = model_type(input_tensor = processed_inputs, weights= model_weight,
              include_top=False, input_shape = self.input_dim)
             
             # freeze the weights first
@@ -427,7 +428,7 @@ if __name__ == "__main__":
         preprocess_func_list.append(preprocess_func)
         
     model = XRAY_model(model_type_list,
-                        preprocess_func = preprocess_func_list,
+                        preprocess_func_list = preprocess_func_list,
                         input_dim = (224,224,3), use_attn = True, learning_rate = args.learning_rate,
                         epochs = args.epochs, drop_out = args.drop_out, batch_size = args.batch_size,
                         activation = args.activation, fine_tune = args.fine_tune, kernel_l2 = args.kernel_l2,
