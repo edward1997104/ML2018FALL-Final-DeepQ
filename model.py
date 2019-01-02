@@ -141,6 +141,7 @@ class XRAY_model():
         
         # for each model
         result_layers = []
+        pretrained_model_list = []
 
         for model_type, preprocess_func in zip(model_type_list, preprocess_func_list):
 
@@ -150,6 +151,7 @@ class XRAY_model():
 
             pretrained_model = model_type(input_tensor = processed_inputs, weights= model_weight,
              include_top=False, input_shape = self.input_dim)
+            pretrained_model_list.append(pretrained_model)
             
             # freeze the weights first
             pretrained_model.trainable = fine_tune or (model_weight == None)
@@ -211,8 +213,9 @@ class XRAY_model():
             
             print('clustering dimension: ', model_output.shape[-1])
             # allow layers trainable
-            for layer in pretrained_model.layers:
-                layer.trainable = True
+            for pretrained_model in pretrained_model_list:
+                for layer in pretrained_model.layers:
+                    layer.trainable = fine_tune
             
             # load data
             X_train, _, unlabel_data, _, _ = load_train_data()
@@ -247,10 +250,11 @@ class XRAY_model():
             
             print('Done Unsupervised Training......')
         
-        for layer in pretrained_model.layers:
-            layer.trainable = fine_tune
         
-                # Build Model
+        for pretrained_model in pretrained_model_list:
+            pretrained_model.trainable = fine_tune
+
+        # Build Model
         self.model = Model(inputs = [inputs], outputs = [output])
 
         self.model.compile(optimizer = 'adam', loss = 'binary_crossentropy',
