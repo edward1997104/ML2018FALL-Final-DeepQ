@@ -24,6 +24,7 @@ def arg_parser():
     parser.add_argument('--reweight', type = lambda x: (str(x).lower() == 'true'), default = False)
     parser.add_argument('--model_type', type = str, default = 'vgg16')
     parser.add_argument('--deep_clustering', type = lambda x: (str(x).lower() == 'true'), default = False)
+    parser.add_argument('--using_gpu',  type = lambda x: (str(x).lower() == 'true'), default = True)
 
     # deep clustering epochs
     parser.add_argument('--deep_clustering_epochs', type = int, default = 200)
@@ -123,6 +124,13 @@ class XRAY_model():
         self.drop_out = drop_out
         self.batch_size = batch_size
         self.reweight = reweight
+
+        if args.using_gpu:
+            import tensorflow as tf
+            from keras.backend.tensorflow_backend import set_session
+            config = tf.ConfigProto()
+            config.gpu_options.per_process_gpu_memory_fraction = 0.5
+            set_session(tf.Session(config=config))
 
 
         inputs = Input(shape = input_dim)
