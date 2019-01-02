@@ -2,7 +2,7 @@ from keras.models import Sequential, load_model
 from keras.models import Model
 from keras import regularizers
 from keras.preprocessing.image import ImageDataGenerator
-from keras.layers import Dense, Activation, Convolution2D, MaxPooling2D, Flatten, InputLayer, LeakyReLU, BatchNormalization, Dropout, GlobalAveragePooling2D, Input, Conv2D, AvgPool2D, multiply, Lambda
+from keras.layers import Dense, Activation, Convolution2D, MaxPooling2D, Flatten, InputLayer, LeakyReLU, BatchNormalization, Dropout, GlobalAveragePooling2D, Input, Conv2D, AvgPool2D, multiply, Lambda, Concatenate
 import keras.applications
 import keras.backend as K
 from sklearn.metrics import roc_curve, auc, roc_auc_score
@@ -22,7 +22,7 @@ def arg_parser():
     # training flag
     parser.add_argument('--training', type = lambda x: (str(x).lower() == 'true'), default = True)
     parser.add_argument('--reweight', type = lambda x: (str(x).lower() == 'true'), default = False)
-    parser.add_argument('--model_type', type = str, default = 'vgg16')
+    parser.add_argument('--model_type', '--names-list', nargs='+', default=['vgg16'])
     parser.add_argument('--deep_clustering', type = lambda x: (str(x).lower() == 'true'), default = False)
     parser.add_argument('--using_gpu',  type = lambda x: (str(x).lower() == 'true'), default = True)
 
@@ -136,46 +136,59 @@ class XRAY_model():
         inputs = Input(shape = input_dim)
         processed_inputs = inputs
 
-        if preprocess_func:
-            processed_inputs = Lambda(preprocess_func) (processed_inputs)
         
         if model_weight == 'None':
             model_weight = None
-
-        pretrained_model = MODEL(input_tensor = processed_inputs, weights= model_weight, include_top=False, input_shape = self.input_dim)
         
-        # freeze the weights first
-        pretrained_model.trainable = fine_tune or (model_weight == None)
+        # for each model
+        result_layers = []
 
-        if args.connected_layers != -1:
-            model_output = pretrained_model.layers[args.connected_layers].output
-        else:
-            model_output = pretrained_model(processed_inputs)
+        for model_type, preprocess_func in zip(MODEL, preprocess_func):
+
+            if preprocess_func:
+                processed_inputs = Lambda(preprocess_func) (processed_inputs)
+            pretrained_model = MODEL(input_tensor = processed_inputs, weights= model_weight,
+             include_top=False, input_shape = self.input_dim)
+            
+            # freeze the weights first
+            pretrained_model.trainable = fine_tune or (model_weight == None)
+
+            if args.connected_layers != -1:
+                model_output = pretrained_model.layers[args.connected_layers].output
+            else:
+                model_output = pretrained_model(processed_inputs)
 
 
-        if use_attn:
-            pt_depth = model_output.shape[-1]
-            bn_features = BatchNormalization()(model_output)
-            attn_layer = Conv2D(128, kernel_size = (1,1), padding = 'same', activation = 'elu')(bn_features)
-            attn_layer = Conv2D(32, kernel_size = (1,1), padding = 'same', activation = 'elu')(attn_layer)
-            attn_layer = Conv2D(16, kernel_size = (1,1), padding = 'same', activation = 'elu')(attn_layer)
-            attn_layer = AvgPool2D((2,2), strides = (1,1), padding = 'same')(attn_layer) # smooth results
-            attn_layer = Conv2D(1, kernel_size = (1,1), padding = 'valid', activation = 'sigmoid')(attn_layer)
+            if use_attn:
+                pt_depth = model_output.shape[-1]
+                bn_features = BatchNormalization()(model_output)
+                attn_layer = Conv2D(256, kernel_size = (1,1), padding = 'same', activation = 'elu')(bn_features)
+                attn_layer = AvgPool2D((2,2), strides = (1,1), padding = 'same')(attn_layer) # smooth results
+                attn_layer = Conv2D(128, kernel_size = (1,1), padding = 'same', activation = 'elu')(attn_layer)
+                attn_layer = AvgPool2D((2,2), strides = (1,1), padding = 'same')(attn_layer) # smooth results
+                attn_layer = Conv2D(64, kernel_size = (1,1), padding = 'same', activation = 'elu')(attn_layer)
+                attn_layer = AvgPool2D((2,2), strides = (1,1), padding = 'same')(attn_layer) # smooth results
+                attn_layer = Conv2D(1, kernel_size = (1,1), padding = 'valid', activation = 'sigmoid')(attn_layer)
 
-            # fan it out to all of the channels
-            up_c2 = Conv2D(pt_depth, kernel_size = (1,1), padding = 'same', 
-                        activation = 'linear', use_bias = False, kernel_initializer = keras.initializers.Ones())
-            up_c2.trainable = False
-            attn_layer = up_c2(attn_layer)
-            self.attn_layer = attn_layer
+                # fan it out to all of the channels
+                up_c2 = Conv2D(pt_depth, kernel_size = (1,1), padding = 'same', 
+                            activation = 'linear', use_bias = False, kernel_initializer = keras.initializers.Ones())
+                up_c2.trainable = False
+                attn_layer = up_c2(attn_layer)
+                self.attn_layer = attn_layer
 
-            # normalize the feature
-            mask_features = multiply([attn_layer, bn_features])
-            gap_features = GlobalAveragePooling2D()(mask_features)
-            gap_mask = GlobalAveragePooling2D()(attn_layer)
-            model_output = Lambda(lambda x: x[0]/x[1], name = 'RescaleGAP')([gap_features, gap_mask])
-        else:
-            model_output = GlobalAveragePooling2D()(model_output)
+                # normalize the feature
+                mask_features = multiply([attn_layer, bn_features])
+                gap_features = GlobalAveragePooling2D()(mask_features)
+                gap_mask = GlobalAveragePooling2D()(attn_layer)
+                model_output = Lambda(lambda x: x[0]/x[1], name = 'RescaleGAP')([gap_features, gap_mask])
+            else:
+                model_output = GlobalAveragePooling2D()(model_output)
+            
+            result_layers.append(model_output)
+        
+        model_output = Concatenate(result_layers)
+
         
         # Dense Layers
         output = Dropout(self.drop_out) (model_output)
@@ -375,14 +388,44 @@ def output_csv(pred, idx, disease_path = './data/ntu_final_2018/classname.txt', 
 
 if __name__ == "__main__":
     
-    if args.model_type == 'vgg16':
-        used_model = keras.applications.VGG16
-        preprocess_func = keras.applications.vgg16.preprocess_input
-    elif args.model_type == 'densenet121':
-        used_model = keras.applications.DenseNet121
-        preprocess_func = keras.applications.densenet.preprocess_input
-    model = XRAY_model(used_model,
-                        preprocess_func = preprocess_func,
+    # define model used
+    model_type_list, preprocess_func_list = [], []
+    for model_type in args.model_type:
+        if model_type == 'vgg16':
+            used_model = keras.applications.VGG16
+            preprocess_func = keras.applications.vgg16.preprocess_input
+        elif model_type == 'densenet121':
+            used_model = keras.applications.DenseNet121
+            preprocess_func = keras.applications.densenet.preprocess_input
+        elif model_type == 'vgg19':
+            used_model = keras.applications.VGG19
+            preprocess_func = keras.applications.vgg19.preprocess_input
+        elif model_type == 'xception':
+            used_model = keras.applications.Xception
+            preprocess_func = keras.applications.xception.preprocess_input
+        elif model_type == 'resnet50':
+            used_model = keras.applications.ResNet50
+            preprocess_func = keras.applications.resnet50.preprocess_input
+        elif model_type == 'inceptionv3':
+            used_model = keras.applications.InceptionV3
+            preprocess_func = keras.applications.inception_v3.preprocess_input
+        elif model_type == 'densenet121':
+            used_model = keras.applications.DenseNet121
+            preprocess_func = keras.applications.densenet.preprocess_input
+        elif model_type == 'densenet169':
+            used_model = keras.applications.DenseNet169
+            preprocess_func = keras.applications.densenet.preprocess_input
+        elif model_type == 'densenet201':
+            used_model = keras.applications.DenseNet201
+            preprocess_func = keras.applications.densenet.preprocess_input
+        else:
+            assert('Unknown model!')
+        
+        model_type_list.append(used_model)
+        preprocess_func_list.append(preprocess_func)
+        
+    model = XRAY_model(model_type_list,
+                        preprocess_func = preprocess_func_list,
                         input_dim = (224,224,3), use_attn = True, learning_rate = args.learning_rate,
                         epochs = args.epochs, drop_out = args.drop_out, batch_size = args.batch_size,
                         activation = args.activation, fine_tune = args.fine_tune, kernel_l2 = args.kernel_l2,
