@@ -139,7 +139,10 @@ class XRAY_model():
         # freeze the weights first
         pretrained_model.trainable = fine_tune or (model_weight == None)
 
-        model_output = pretrained_model.layers[args.connected_layers].output
+        if args.connected_layers != -1:
+            model_output = pretrained_model.layers[args.connected_layers].output
+        else:
+            model_output = pretrained_model(processed_inputs)
 
 
         if use_attn:
@@ -166,6 +169,28 @@ class XRAY_model():
         else:
             model_output = GlobalAveragePooling2D()(model_output)
         
+        # Dense Layers
+        output = Dropout(self.drop_out) (model_output)
+        output = Dense(512, activation = activation, kernel_regularizer=regularizers.l2(kernel_l2))(output)
+        output = Dropout(self.drop_out) (output)
+        output = Dense(self.output_dim, activation = 'sigmoid', kernel_regularizer=regularizers.l2(kernel_l2)) (output)
+
+
+        auc_roc = as_keras_metric(tf.metrics.auc)
+        recall = as_keras_metric(tf.metrics.recall)
+        precision = as_keras_metric(tf.metrics.precision)
+        # f1_measure = as_keras_metric(tf.contrib.metrics.f1_score)
+
+
+        # Build Model
+        self.model = Model(inputs = [inputs], outputs = [output])
+
+        self.model.compile(optimizer = 'adam', loss = 'binary_crossentropy',
+                           metrics = ['binary_accuracy', 'mae', auc_roc, recall, precision 
+                        #    f1_measure
+                           ])
+        self.model.summary()
+
         if args.deep_clustering:
             
             print('clustering dimension: ', model_output.shape[-1])
@@ -205,28 +230,6 @@ class XRAY_model():
             print('Done Unsupervised Training......')
         for layer in pretrained_model.layers:
             layer.trainable = fine_tune
-        
-        # Dense Layers
-        output = Dropout(self.drop_out) (model_output)
-        output = Dense(512, activation = activation, kernel_regularizer=regularizers.l2(kernel_l2))(output)
-        output = Dropout(self.drop_out) (output)
-        output = Dense(self.output_dim, activation = 'sigmoid', kernel_regularizer=regularizers.l2(kernel_l2)) (output)
-
-
-        auc_roc = as_keras_metric(tf.metrics.auc)
-        recall = as_keras_metric(tf.metrics.recall)
-        precision = as_keras_metric(tf.metrics.precision)
-        # f1_measure = as_keras_metric(tf.contrib.metrics.f1_score)
-
-
-        # Build Model
-        self.model = Model(inputs = [inputs], outputs = [output])
-
-        self.model.compile(optimizer = 'adam', loss = 'binary_crossentropy',
-                           metrics = ['binary_accuracy', 'mae', auc_roc, recall, precision 
-                        #    f1_measure
-                           ])
-        self.model.summary()
 
 
         
