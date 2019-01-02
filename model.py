@@ -182,15 +182,6 @@ class XRAY_model():
         # f1_measure = as_keras_metric(tf.contrib.metrics.f1_score)
 
 
-        # Build Model
-        self.model = Model(inputs = [inputs], outputs = [output])
-
-        self.model.compile(optimizer = 'adam', loss = 'binary_crossentropy',
-                           metrics = ['binary_accuracy', 'mae', auc_roc, recall, precision 
-                        #    f1_measure
-                           ])
-        self.model.summary()
-
         if args.deep_clustering:
             
             print('clustering dimension: ', model_output.shape[-1])
@@ -228,8 +219,18 @@ class XRAY_model():
                 print('epoch %d clustering loss: %lf' % (i, loss))
             
             print('Done Unsupervised Training......')
+        
         for layer in pretrained_model.layers:
             layer.trainable = fine_tune
+        
+                # Build Model
+        self.model = Model(inputs = [inputs], outputs = [output])
+
+        self.model.compile(optimizer = 'adam', loss = 'binary_crossentropy',
+                           metrics = ['binary_accuracy', 'mae', auc_roc, recall, precision 
+                        #    f1_measure
+                           ])
+        self.model.summary()
 
 
         
