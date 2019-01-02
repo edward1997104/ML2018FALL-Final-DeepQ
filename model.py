@@ -182,7 +182,7 @@ class XRAY_model():
                 mask_features = multiply([attn_layer, bn_features])
                 gap_features = GlobalAveragePooling2D()(mask_features)
                 gap_mask = GlobalAveragePooling2D()(attn_layer)
-                model_output = Lambda(lambda x: x[0]/x[1], name = 'RescaleGAP')([gap_features, gap_mask])
+                model_output = Lambda(lambda x: x[0]/x[1])([gap_features, gap_mask])
             else:
                 model_output = GlobalAveragePooling2D()(model_output)
             
