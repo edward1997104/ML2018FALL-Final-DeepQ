@@ -359,6 +359,7 @@ def get_model_autoencoder(input_dim, inputs, preprocess_func):
     x = Conv2D(128, (3, 3), activation='relu', padding='same',kernel_initializer='random_uniform')(x)
 
     encoded = MaxPooling2D((2, 2), padding='same', name="encoded")(x)
+    print(encoded)
 
     x = Conv2D(128, (3, 3), activation='elu', padding='same',kernel_initializer='random_uniform')(encoded)
     x = Dropout(0.3)(x)
