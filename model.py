@@ -17,9 +17,6 @@ from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ModelCheckpoint, CSVLogger, Callback
 import faiss
 
-def pixel_loss(y_true, y_pred):
-    return K.mean(K.square(y_pred - y_true))
-
 def arg_parser():
     parser = argparse.ArgumentParser(description='Enter Argument for model')
 
@@ -385,7 +382,7 @@ def get_model_autoencoder(input_dim, inputs, preprocess_func):
     
     autoencoder = Model(inputs = inputs, outputs = decoded)
     optimizer = Adam(lr=1e-6, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
-    autoencoder.compile(optimizer=optimizer, loss=pixel_loss,)
+    autoencoder.compile(optimizer=optimizer, loss='mean_squared_error',)
     autoencoder.summary()
     return autoencoder
 
