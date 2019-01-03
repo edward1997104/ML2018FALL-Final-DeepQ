@@ -218,7 +218,7 @@ class XRAY_model():
 
             autoencoder.fit_generator(unlabelled_gen, epochs = args.auto_epochs)
 
-            autoencoder.save_weights(str(args.auto_epochs + 10) + '_autoencooder.h5')
+            autoencoder.save_weights(str(args.auto_epochs + 10) + '_autoencoder.h5')
 
             print("Done training Autoencoder")
             autoencoder.trainable = args.fine_tune_auto
@@ -321,7 +321,7 @@ class XRAY_model():
 
         hist = self.model.fit_generator(
             training_gen,
-            validation_data = validation_gen, epochs = self.epochs, callbacks = callbacks, sample_weights = sample_weights)
+            validation_data = validation_gen, epochs = self.epochs, callbacks = callbacks, sample_weight = sample_weights)
         
         print ("Done Training model")
         print ("AVG AUC:", self.score(X_test, y_test))
