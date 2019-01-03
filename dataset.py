@@ -64,6 +64,21 @@ class Testing_Generator(Sequence):
             cv2.resize(cv2.imread(file_name), dsize = self.reshaped_size)
                for file_name in batch_x])
 
+class Unsupervised_Generator(Sequence):
+    
+    def __init__(self, image_filenames, batch_size, reshaped_size = (150, 150)):
+        self.image_filenames= image_filenames
+        self.batch_size = batch_size
+        self.reshaped_size = reshaped_size
+
+    def __len__(self):
+        return int(np.ceil(len(self.image_filenames) / float(self.batch_size)))
+
+    def __getitem__(self, idx):
+        batch_x = self.image_filenames[idx * self.batch_size:(idx + 1) * self.batch_size]
+        X = np.array([cv2.resize(cv2.imread(file_name), dsize = self.reshaped_size) for file_name in batch_x])
+        return X, X
+
 def load_train_data(train_img_folder = './data/data/images/', path = './data/ntu_final_2018/train.csv'):
     
     # loading the dataset
