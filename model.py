@@ -201,7 +201,7 @@ class XRAY_model():
         if args.CNN_autoencoder:
 
             print("Start training Autoencoder")
-            autoencoder = get_model_autoencoder(input_dim)
+            autoencoder = get_model_autoencoder(input_dim , inputs, preprocess_func_list[0])
             X_train, _, unlabel_data, _, _ = load_train_data()
             test_idxs, _ = load_test_idxs()
 
@@ -340,9 +340,10 @@ class XRAY_model():
         return
 
 # borrow from simple CNN autoencoder
-def get_model_autoencoder(input_dim):
+def get_model_autoencoder(input_dim, inputs, preprocess_func):
     
-    input_img = Input(shape=input_dim, name="input_img")  # adapt this if using `channels_first` image data format
+    input_img = inputs
+    input_img = Lambda(preprocess_func) (input_img)
     x = Conv2D(16, (3, 3), activation='elu', padding='same',kernel_initializer='random_uniform')(input_img)
     x = Conv2D(16, (3, 3), activation='elu', padding='same',kernel_initializer='random_uniform')(x)
     x = MaxPooling2D((2, 2), padding='same')(x)
@@ -375,7 +376,7 @@ def get_model_autoencoder(input_dim):
     x = UpSampling2D((2, 2))(x)
     decoded = Conv2D(3, (2, 2), activation='sigmoid', padding='same',name="decoded")(x)
     
-    autoencoder = Model(input_img, decoded)
+    autoencoder = Model(inputs = inputs, outputs = decoded)
     optimizer = Adam(lr=1e-6, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
     autoencoder.compile(optimizer=optimizer, loss='binary_crossentropy',)
     return autoencoder
