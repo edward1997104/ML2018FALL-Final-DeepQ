@@ -16,6 +16,8 @@ import argparse
 from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ModelCheckpoint, CSVLogger, Callback
 import faiss
+from sklearn.utils import class_weight
+
 
 def arg_parser():
     parser = argparse.ArgumentParser(description='Enter Argument for model')
@@ -35,6 +37,8 @@ def arg_parser():
     # auto encoder parms
     parser.add_argument('--auto_epochs', type = int, default = 10)
     parser.add_argument("--fine_tune_auto", type = lambda x: (str(x).lower() == 'true'), default = False)
+    parser.add_argument('--load_auto', type = lambda x: (str(x).lower() == 'true'), default = True)
+    parser.add_argument('--load_auto_path', type = str, default = '10_autoencoder.h5')
 
     # add position for saving
     parser.add_argument("--model", type=str, default = 'baseline.h5')
@@ -203,6 +207,9 @@ class XRAY_model():
 
             print("Start training Autoencoder")
             autoencoder = get_model_autoencoder(input_dim , inputs, preprocess_func_list[0])
+            if args.load_auto:
+                autoencoder.load_weights(args.load_auto_path)
+
             X_train, _, unlabel_data, _, _ = load_train_data()
             test_idxs, _ = load_test_idxs()
 
@@ -211,7 +218,7 @@ class XRAY_model():
 
             autoencoder.fit_generator(unlabelled_gen, epochs = args.auto_epochs)
 
-            autoencoder.save_weights(str(args.auto_epochs) + '_autoencooder.h5')
+            autoencoder.save_weights(str(args.auto_epochs + 10) + '_autoencooder.h5')
 
             print("Done training Autoencoder")
             autoencoder.trainable = args.fine_tune_auto
@@ -303,6 +310,9 @@ class XRAY_model():
         
         if self.reweight:
             X_train, y_train = reweight_sample(X_train, y_train, per_class = 1000)
+        
+        sample_weights = class_weight.compute_sample_weight('balanced', y_train)
+
         training_gen = Training_Generator(X_train, y_train, self.batch_size, reshaped_size = self.input_dim[:-1])
         validation_gen = Training_Generator(X_test, y_test, self.batch_size, reshaped_size = self.input_dim[:-1])
         callbacks = [roc_auc_callback(training_gen, validation_gen),
@@ -311,7 +321,7 @@ class XRAY_model():
 
         hist = self.model.fit_generator(
             training_gen,
-            validation_data = validation_gen, epochs = self.epochs, callbacks = callbacks)
+            validation_data = validation_gen, epochs = self.epochs, callbacks = callbacks, sample_weights = sample_weights)
         
         print ("Done Training model")
         print ("AVG AUC:", self.score(X_test, y_test))
