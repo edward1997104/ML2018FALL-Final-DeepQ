@@ -374,7 +374,7 @@ def get_model_autoencoder(input_dim, inputs, preprocess_func):
     x = Conv2D(16, (3, 3), activation='elu', padding='same',kernel_initializer='random_uniform')(x)
     x = Conv2D(16, (3, 3), activation='elu', padding='same',kernel_initializer='random_uniform')(x)
     x = UpSampling2D((2, 2))(x)
-    decoded = x
+    decoded = Conv2D(3, (2, 2), activation='elu', padding='same',name="decoded")(x)
     
     autoencoder = Model(inputs = inputs, outputs = decoded)
     optimizer = Adam(lr=1e-6, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
