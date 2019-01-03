@@ -7,7 +7,7 @@ import keras.applications
 import keras.backend as K
 from sklearn.metrics import roc_curve, auc, roc_auc_score
 from sklearn.utils import shuffle
-from dataset import Training_Generator, Testing_Generator, load_train_data, load_test_idxs, split_dataset, reweight_sample
+from dataset import Training_Generator, Testing_Generator, Unsupervised_Generator, load_train_data, load_test_idxs, split_dataset, reweight_sample
 import tensorflow as tf
 import numpy as np
 from scipy import interp
@@ -205,7 +205,7 @@ class XRAY_model():
             X_train, _, unlabel_data, _, _ = load_train_data()
             test_idxs, _ = load_test_idxs()
 
-            unlabelled_gen = Testing_Generator(X_train + unlabel_data + test_idxs,
+            unlabelled_gen = Unsupervised_Generator(X_train + unlabel_data + test_idxs,
              self.batch_size, input_dim[:-1])
 
             autoencoder.fit_generator(unlabelled_gen)
