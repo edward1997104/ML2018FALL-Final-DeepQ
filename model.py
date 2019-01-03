@@ -2,7 +2,7 @@ from keras.models import Sequential, load_model
 from keras.models import Model
 from keras import regularizers
 from keras.preprocessing.image import ImageDataGenerator
-from keras.layers import Dense, Activation, Convolution2D, MaxPooling2D, Flatten, InputLayer, LeakyReLU, BatchNormalization, Dropout, GlobalAveragePooling2D, Input, Conv2D, AvgPool2D, multiply, Lambda, Concatenate
+from keras.layers import Dense, Activation, Convolution2D, MaxPooling2D, Flatten, InputLayer, LeakyReLU, BatchNormalization, Dropout, GlobalAveragePooling2D, Input, Conv2D, AvgPool2D, multiply, Lambda, Concatenate, UpSampling2D
 import keras.applications
 import keras.backend as K
 from sklearn.metrics import roc_curve, auc, roc_auc_score
@@ -13,6 +13,7 @@ import numpy as np
 from scipy import interp
 import pandas as pd
 import argparse
+from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ModelCheckpoint, CSVLogger, Callback
 import faiss
 
