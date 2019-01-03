@@ -212,7 +212,7 @@ class XRAY_model():
             unlabelled_gen = Unsupervised_Generator(X_train + unlabel_data + test_idxs,
              self.batch_size, input_dim[:-1])
 
-            autoencoder.fit_generator(unlabelled_gen, args.auto_epochs)
+            autoencoder.fit_generator(unlabelled_gen, epochs = args.auto_epochs)
 
             autoencoder.save_weights(str(args.auto_epochs) + '_autoencooder.h5')
 
