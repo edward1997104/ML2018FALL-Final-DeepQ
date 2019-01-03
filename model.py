@@ -129,7 +129,7 @@ class XRAY_model():
             import tensorflow as tf
             from keras.backend.tensorflow_backend import set_session
             config = tf.ConfigProto()
-            config.gpu_options.per_process_gpu_memory_fraction = 0.7
+            config.gpu_options.per_process_gpu_memory_fraction = 1.0
             set_session(tf.Session(config=config))
 
 
@@ -166,9 +166,7 @@ class XRAY_model():
                 pt_depth = model_output.shape[-1]
                 bn_features = BatchNormalization()(model_output)
                 attn_layer = Conv2D(256, kernel_size = (1,1), padding = 'same', activation = 'elu')(bn_features)
-                attn_layer = AvgPool2D((2,2), strides = (1,1), padding = 'same')(attn_layer) # smooth results
                 attn_layer = Conv2D(128, kernel_size = (1,1), padding = 'same', activation = 'elu')(attn_layer)
-                attn_layer = AvgPool2D((2,2), strides = (1,1), padding = 'same')(attn_layer) # smooth results
                 attn_layer = Conv2D(64, kernel_size = (1,1), padding = 'same', activation = 'elu')(attn_layer)
                 attn_layer = AvgPool2D((2,2), strides = (1,1), padding = 'same')(attn_layer) # smooth results
                 attn_layer = Conv2D(1, kernel_size = (1,1), padding = 'valid', activation = 'sigmoid')(attn_layer)
