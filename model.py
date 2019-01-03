@@ -374,7 +374,7 @@ def get_model_autoencoder(input_dim, inputs, preprocess_func):
     x = Conv2D(16, (3, 3), activation='elu', padding='same',kernel_initializer='random_uniform')(x)
     x = Conv2D(16, (3, 3), activation='elu')(x)
     x = UpSampling2D((2, 2))(x)
-    decoded = Conv2D(3, (2, 2), activation='sigmoid', padding='valid',name="decoded")(x)
+    decoded = Conv2D(3, (2, 2), activation='sigmoid', padding='same',name="decoded")(x)
     
     autoencoder = Model(inputs = inputs, outputs = decoded)
     optimizer = Adam(lr=1e-6, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
@@ -498,7 +498,7 @@ if __name__ == "__main__":
         
     model = XRAY_model(model_type_list,
                         preprocess_func_list = preprocess_func_list,
-                        input_dim = (224,224,3), use_attn = True, learning_rate = args.learning_rate,
+                        input_dim = (256,256,3), use_attn = True, learning_rate = args.learning_rate,
                         epochs = args.epochs, drop_out = args.drop_out, batch_size = args.batch_size,
                         activation = args.activation, fine_tune = args.fine_tune, kernel_l2 = args.kernel_l2,
                         model_weight = args.model_weight)
