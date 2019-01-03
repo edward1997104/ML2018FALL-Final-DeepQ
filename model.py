@@ -350,7 +350,7 @@ class XRAY_model():
 def get_model_autoencoder(input_dim, inputs, preprocess_func):
     
     input_img = inputs
-    input_img = Lambda(preprocess_func) (input_img)
+    input_img = Lambda(keras.applications.inception_v3.preprocess_input) (input_img)
     x = Conv2D(16, (3, 3), activation='elu', padding='same',kernel_initializer='random_uniform')(input_img)
     x = Conv2D(16, (3, 3), activation='elu', padding='same',kernel_initializer='random_uniform')(x)
     x = MaxPooling2D((2, 2), padding='same')(x)

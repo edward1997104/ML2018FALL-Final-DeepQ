@@ -78,7 +78,7 @@ class Unsupervised_Generator(Sequence):
     def __getitem__(self, idx):
         batch_x = self.image_filenames[idx * self.batch_size:(idx + 1) * self.batch_size]
         X = np.array([cv2.resize(cv2.imread(file_name), dsize = self.reshaped_size) for file_name in batch_x])
-        return X, keras.applications.vgg16.preprocess_input(X)
+        return X, keras.applications.inception_v3.preprocess_input(X)
 
 def load_train_data(train_img_folder = './data/data/images/', path = './data/ntu_final_2018/train.csv'):
     
