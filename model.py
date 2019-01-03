@@ -34,6 +34,7 @@ def arg_parser():
 
     # auto encoder parms
     parser.add_argument('--auto_epochs', type = int, default = 10)
+    parser.add_argument("--fine_tune_auto", type = lambda x: (str(x).lower() == 'true'), default = False)
 
     # add position for saving
     parser.add_argument("--model", type=str, default = 'baseline.h5')
@@ -208,11 +209,14 @@ class XRAY_model():
             unlabelled_gen = Unsupervised_Generator(X_train + unlabel_data + test_idxs,
              self.batch_size, input_dim[:-1])
 
-            autoencoder.fit_generator(unlabelled_gen)
+            autoencoder.fit_generator(unlabelled_gen, args.auto_epochs)
+
+            autoencoder.save_weights(str(args.auto_epochs) + '_autoencooder.h5')
 
             print("Done training Autoencoder")
+            autoencoder.trainable = args.fine_tune_auto
             encoder_embedding =  autoencoder.get_layer(name = 'encoded')
-            encoder_embedding = GlobalAveragePooling2D()(encoder_embedding)
+            encoder_embedding = GlobalAveragePooling2D()(encoder_embedding.output)
             model_output = Concatenate() ([encoder_embedding, model_output])
 
         
@@ -378,7 +382,7 @@ def get_model_autoencoder(input_dim, inputs, preprocess_func):
     
     autoencoder = Model(inputs = inputs, outputs = decoded)
     optimizer = Adam(lr=1e-6, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
-    autoencoder.compile(optimizer=optimizer, loss='binary_crossentropy',)
+    autoencoder.compile(optimizer=optimizer, loss='mean_squared_error',)
     autoencoder.summary()
     return autoencoder
 
