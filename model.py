@@ -7,7 +7,7 @@ import keras.applications
 import keras.backend as K
 from sklearn.metrics import roc_curve, auc, roc_auc_score
 from sklearn.utils import shuffle
-from dataset import Training_Generator, Testing_Generator, Unsupervised_Generator, load_train_data, load_test_idxs, split_dataset, reweight_sample
+from dataset import Training_Generator, Testing_Generator, Unsupervised_Generator, Weighted_Training_Generator, load_train_data, load_test_idxs, split_dataset, reweight_sample
 import tensorflow as tf
 import numpy as np
 from scipy import interp
@@ -313,7 +313,7 @@ class XRAY_model():
         
         sample_weights = class_weight.compute_sample_weight('balanced', y_train)
 
-        training_gen = Training_Generator(X_train, y_train, self.batch_size, reshaped_size = self.input_dim[:-1])
+        training_gen = Weighted_Training_Generator(X_train, y_train, sample_weights, self.batch_size, reshaped_size = self.input_dim[:-1])
         validation_gen = Training_Generator(X_test, y_test, self.batch_size, reshaped_size = self.input_dim[:-1])
         callbacks = [roc_auc_callback(training_gen, validation_gen),
                     EarlyStopping(monitor='roc_auc_val', mode='max', verbose=1,
@@ -321,7 +321,7 @@ class XRAY_model():
 
         hist = self.model.fit_generator(
             training_gen,
-            validation_data = validation_gen, epochs = self.epochs, callbacks = callbacks, sample_weight = sample_weights)
+            validation_data = validation_gen, epochs = self.epochs, callbacks = callbacks)
         
         print ("Done Training model")
         print ("AVG AUC:", self.score(X_test, y_test))

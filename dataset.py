@@ -48,6 +48,42 @@ class Training_Generator(Sequence):
             cv2.resize(cv2.imread(file_name), dsize = self.reshaped_size)
                for file_name in batch_x]), np.array(batch_y)
 
+class Weighted_Training_Generator(Sequence):
+
+    def __init__(self, image_filenames, labels, weights, batch_size, reshaped_size = (150, 150), epsilon = 0.25):
+        self.image_filenames, self.labels, self.weights = image_filenames, labels, weights
+        self.batch_size = batch_size
+        self.reshaped_size = reshaped_size
+        self.epsilon = epsilon
+
+    def __len__(self):
+        return int(np.ceil(len(self.image_filenames) / float(self.batch_size)))
+    
+    def __getitem__(self, idx):
+        batch_x, batch_y, batch_weights = self.__data_generation(idx)
+
+        if np.random.rand() < self.epsilon:
+            batch_x = self.__augmentation(batch_x)
+
+        return batch_x, batch_y, batch_weights
+
+    def __augmentation(self, batch_x, epsilon = 0.25):
+        shape = batch_x.shape
+        batch_x = np.array([random_rotation(x) for x in batch_x]).reshape(shape)
+
+        batch_x = batch_x.reshape(shape)
+
+        return batch_x
+
+    def __data_generation(self, idx):
+        batch_x = self.image_filenames[idx * self.batch_size:(idx + 1) * self.batch_size]
+        batch_y = self.labels[idx * self.batch_size:(idx + 1) * self.batch_size]
+        batch_weights = self.weights[idx * self.batch_size:(idx + 1) * self.batch_size]
+
+        return np.array([
+            cv2.resize(cv2.imread(file_name), dsize = self.reshaped_size)
+               for file_name in batch_x]), np.array(batch_y), np.array(batch_weights)
+
 class Testing_Generator(Sequence):
     
     def __init__(self, image_filenames, batch_size, reshaped_size = (150, 150)):
