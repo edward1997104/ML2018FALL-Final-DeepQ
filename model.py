@@ -24,11 +24,15 @@ def arg_parser():
     parser.add_argument('--reweight', type = lambda x: (str(x).lower() == 'true'), default = False)
     parser.add_argument('--model_type', '--names-list', nargs='+', default=['vgg16'])
     parser.add_argument('--deep_clustering', type = lambda x: (str(x).lower() == 'true'), default = False)
+    parser.add_argument('--CNN_autoencoder', type = lambda x: (str(x).lower() == 'true'), default = False)
     parser.add_argument('--using_gpu',  type = lambda x: (str(x).lower() == 'true'), default = True)
 
     # deep clustering epochs
     parser.add_argument('--deep_clustering_epochs', type = int, default = 200)
     parser.add_argument('--deep_clustering_nums', type = int, default = 14)
+
+    # auto encoder parms
+    parser.add_argument('--auto_epochs', type = int, default = 10)
 
     # add position for saving
     parser.add_argument("--model", type=str, default = 'baseline.h5')
@@ -192,6 +196,23 @@ class XRAY_model():
             model_output = Concatenate() (result_layers)
         else:
             model_output = result_layers[0]
+        
+        if args.CNN_autoencoder:
+
+            print("Start training Autoencoder")
+            autoencoder = get_model_autoencoder(input_dim)
+            X_train, _, unlabel_data, _, _ = load_train_data()
+            test_idxs, _ = load_test_idxs()
+
+            unlabelled_gen = Testing_Generator(X_train + unlabel_data + test_idxs,
+             self.batch_size, input_dim[:-1])
+
+            autoencoder.fit_generator(unlabelled_gen)
+
+            print("Done training Autoencoder")
+            encoder_embedding =  autoencoder.get_layer(name = 'encoded')
+            encoder_embedding = GlobalAveragePooling2D()(encoder_embedding)
+            model_output = Concatenate() ([encoder_embedding, model_output])
 
         
         # Dense Layers
@@ -213,7 +234,7 @@ class XRAY_model():
             # allow layers trainable
             for pretrained_model in pretrained_model_list:
                 for layer in pretrained_model.layers:
-                    layer.trainable = fine_tune
+                    layer.trainable = True
             
             # load data
             X_train, _, unlabel_data, _, _ = load_train_data()
@@ -316,6 +337,47 @@ class XRAY_model():
         self.model.load_weights(path)
         print ("Done Loading model")
         return
+
+# borrow from simple CNN autoencoder
+def get_model_autoencoder(input_dim):
+    
+    input_img = Input(shape=input_dim, name="input_img")  # adapt this if using `channels_first` image data format
+    x = Conv2D(16, (3, 3), activation='elu', padding='same',kernel_initializer='random_uniform')(input_img)
+    x = Conv2D(16, (3, 3), activation='elu', padding='same',kernel_initializer='random_uniform')(x)
+    x = MaxPooling2D((2, 2), padding='same')(x)
+    x = Dropout(0.3)(x)
+    x = Conv2D(32, (3, 3), activation='relu', padding='same',kernel_initializer='random_uniform')(x)
+    x = Conv2D(32, (3, 3), activation='elu', padding='same',kernel_initializer='random_uniform')(x)
+    x = MaxPooling2D((2, 2), padding='same')(x)
+    x = Dropout(0.3)(x)
+    x = Conv2D(64, (3, 3), activation='elu', padding='same',kernel_initializer='random_uniform')(x)
+    x = Conv2D(64, (3, 3), activation='elu', padding='same',kernel_initializer='random_uniform')(x)
+    x = MaxPooling2D((2, 2), padding='same')(x)
+    x = Dropout(0.3)(x)
+    x = Conv2D(128, (3, 3), activation='relu', padding='same',kernel_initializer='random_uniform')(x)
+
+    encoded = MaxPooling2D((2, 2), padding='same', name="encoded")(x)
+
+    x = Conv2D(128, (3, 3), activation='elu', padding='same',kernel_initializer='random_uniform')(encoded)
+    x = Dropout(0.3)(x)
+    x = UpSampling2D((2, 2))(x)
+    x = Conv2D(64, (3, 3), activation='elu', padding='same',kernel_initializer='random_uniform')(x)
+    x = Conv2D(64, (3, 3), activation='elu', padding='same',kernel_initializer='random_uniform')(x)
+    x = Dropout(0.3)(x)
+    x = UpSampling2D((2, 2))(x)
+    x = Conv2D(32, (3, 3), activation='elu', padding='same',kernel_initializer='random_uniform')(x)
+    x = Conv2D(32, (3, 3), activation='elu', padding='same',kernel_initializer='random_uniform')(x)
+    x = Dropout(0.3)(x)
+    x = UpSampling2D((2, 2))(x)
+    x = Conv2D(16, (3, 3), activation='elu', padding='same',kernel_initializer='random_uniform')(x)
+    x = Conv2D(16, (3, 3), activation='elu')(x)
+    x = UpSampling2D((2, 2))(x)
+    decoded = Conv2D(3, (2, 2), activation='sigmoid', padding='same',name="decoded")(x)
+    
+    autoencoder = Model(input_img, decoded)
+    optimizer = Adam(lr=1e-6, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
+    autoencoder.compile(optimizer=optimizer, loss='binary_crossentropy',)
+    return autoencoder
 
 # Borrowd code from Deep Cluster
 
