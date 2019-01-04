@@ -94,9 +94,9 @@ class roc_auc_callback(Callback):
                 y_pred_val = pred
                 self.y_val = label_val
  
-        roc_val = roc_auc_score(self.y_val, y_pred_val, average = "micro")
-        logs['roc_auc_val'] = roc_auc_score(self.y_val, y_pred_val, average = "micro")
-        logs['norm_gini_val'] = ( roc_auc_score(self.y_val, y_pred_val, average = "micro") * 2 ) - 1
+        roc_val = roc_auc_score(self.y_val, y_pred_val, average = "macro")
+        logs['roc_auc_val'] = roc_auc_score(self.y_val, y_pred_val, average = "macro")
+        logs['norm_gini_val'] = ( roc_auc_score(self.y_val, y_pred_val, average = "macro") * 2 ) - 1
 
         print('\rroc_auc_val: %s - norm_gini_val: %s' % (str(round(roc_val,5)),str(round((roc_val*2-1),5))), end=10*' '+'\n')
         return
