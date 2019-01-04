@@ -29,6 +29,7 @@ def arg_parser():
     parser.add_argument('--deep_clustering', type = lambda x: (str(x).lower() == 'true'), default = False)
     parser.add_argument('--CNN_autoencoder', type = lambda x: (str(x).lower() == 'true'), default = False)
     parser.add_argument('--using_gpu',  type = lambda x: (str(x).lower() == 'true'), default = True)
+    parser.add_argument('--sample_weights', type = lambda x: (str(x).lower() == 'true'), default = False)
 
     # deep clustering epochs
     parser.add_argument('--deep_clustering_epochs', type = int, default = 200)
@@ -93,9 +94,9 @@ class roc_auc_callback(Callback):
                 y_pred_val = pred
                 self.y_val = label_val
  
-        roc_val = roc_auc_score(self.y_val, y_pred_val, average = "macro")
-        logs['roc_auc_val'] = roc_auc_score(self.y_val, y_pred_val, average = "macro")
-        logs['norm_gini_val'] = ( roc_auc_score(self.y_val, y_pred_val, average = "macro") * 2 ) - 1
+        roc_val = roc_auc_score(self.y_val, y_pred_val, average = "micro")
+        logs['roc_auc_val'] = roc_auc_score(self.y_val, y_pred_val, average = "micro")
+        logs['norm_gini_val'] = ( roc_auc_score(self.y_val, y_pred_val, average = "micro") * 2 ) - 1
 
         print('\rroc_auc_val: %s - norm_gini_val: %s' % (str(round(roc_val,5)),str(round((roc_val*2-1),5))), end=10*' '+'\n')
         return
@@ -312,8 +313,10 @@ class XRAY_model():
             X_train, y_train = reweight_sample(X_train, y_train, per_class = 1000)
         
         sample_weights = class_weight.compute_sample_weight('balanced', y_train)
-
-        training_gen = Weighted_Training_Generator(X_train, y_train, sample_weights, self.batch_size, reshaped_size = self.input_dim[:-1])
+        if args.sample_weights:
+            training_gen = Weighted_Training_Generator(X_test, y_train, sample_weights, self.batch_size, reshaped_size = self.input_dim[:-1])
+        else:
+            training_gen = Training_Generator(X_test, y_train, self.batch_size, reshaped_size = self.input_dim[:-1])
         validation_gen = Training_Generator(X_test, y_test, self.batch_size, reshaped_size = self.input_dim[:-1])
         callbacks = [roc_auc_callback(training_gen, validation_gen),
                     EarlyStopping(monitor='roc_auc_val', mode='max', verbose=1,
