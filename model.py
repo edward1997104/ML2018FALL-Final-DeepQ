@@ -219,7 +219,7 @@ class XRAY_model():
 
             autoencoder.fit_generator(unlabelled_gen, epochs = args.auto_epochs)
 
-            autoencoder.save_weights(str(args.auto_epochs + 10) + '_autoencoder.h5')
+            autoencoder.save_weights(str(args.auto_epochs + 20) + '_autoencoder.h5')
 
             print("Done training Autoencoder")
             autoencoder.trainable = args.fine_tune_auto
@@ -316,7 +316,7 @@ class XRAY_model():
         if args.sample_weights:
             training_gen = Weighted_Training_Generator(X_test, y_train, sample_weights, self.batch_size, reshaped_size = self.input_dim[:-1])
         else:
-            training_gen = Training_Generator(X_test, y_train, self.batch_size, reshaped_size = self.input_dim[:-1])
+            training_gen = Training_Generator(X_train, y_train, self.batch_size, reshaped_size = self.input_dim[:-1])
         validation_gen = Training_Generator(X_test, y_test, self.batch_size, reshaped_size = self.input_dim[:-1])
         callbacks = [roc_auc_callback(training_gen, validation_gen),
                     EarlyStopping(monitor='roc_auc_val', mode='max', verbose=1,
