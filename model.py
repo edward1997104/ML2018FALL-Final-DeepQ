@@ -314,7 +314,7 @@ class XRAY_model():
         
         sample_weights = class_weight.compute_sample_weight('balanced', y_train)
         if args.sample_weights:
-            training_gen = Weighted_Training_Generator(X_test, y_train, sample_weights, self.batch_size, reshaped_size = self.input_dim[:-1])
+            training_gen = Weighted_Training_Generator(X_train, y_train, sample_weights, self.batch_size, reshaped_size = self.input_dim[:-1])
         else:
             training_gen = Training_Generator(X_train, y_train, self.batch_size, reshaped_size = self.input_dim[:-1])
         validation_gen = Training_Generator(X_test, y_test, self.batch_size, reshaped_size = self.input_dim[:-1])
