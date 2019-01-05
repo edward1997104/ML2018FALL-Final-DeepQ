@@ -19,6 +19,19 @@ import faiss
 from sklearn.utils import class_weight
 
 
+def calculating_class_weights(y_true):
+    from sklearn.utils.class_weight import compute_class_weight
+    number_dim = np.shape(y_true)[1]
+    weights = np.empty([number_dim, 2])
+    for i in range(number_dim):
+        weights[i] = compute_class_weight('balanced', [0.,1.], y_true[:, i])
+    return weights
+
+def get_weighted_loss(weights):
+    def weighted_loss(y_true, y_pred):
+        return K.mean((weights[:,0]**(1-y_true))*(weights[:,1]**(y_true))*K.binary_crossentropy(y_true, y_pred), axis=-1)
+    return weighted_loss
+
 def arg_parser():
     parser = argparse.ArgumentParser(description='Enter Argument for model')
 
@@ -30,6 +43,7 @@ def arg_parser():
     parser.add_argument('--CNN_autoencoder', type = lambda x: (str(x).lower() == 'true'), default = False)
     parser.add_argument('--using_gpu',  type = lambda x: (str(x).lower() == 'true'), default = True)
     parser.add_argument('--sample_weights', type = lambda x: (str(x).lower() == 'true'), default = False)
+    parser.add_argument('--class_weights', type = lambda x: (str(x).lower() == 'true'), default = False)
 
     # deep clustering epochs
     parser.add_argument('--deep_clustering_epochs', type = int, default = 200)
@@ -289,10 +303,18 @@ class XRAY_model():
         # Build Model
         self.model = Model(inputs = [inputs], outputs = [output])
 
-        self.model.compile(optimizer = 'adam', loss = 'binary_crossentropy',
-                           metrics = ['binary_accuracy', 'mae', auc_roc, recall, precision 
-                        #    f1_measure
-                           ])
+        _, y_label, _, _, _ = load_train_data()
+        class_weights = calculating_class_weights(y_label)
+        if args.class_weights:
+            self.model.compile(optimizer = 'adam', loss = get_weighted_loss(class_weights),
+                            metrics = ['binary_accuracy', 'mae', auc_roc, recall, precision 
+                            #    f1_measure
+                            ])
+        else:
+            self.model.compile(optimizer = 'adam', loss = 'binary_crossentropy',
+                metrics = ['binary_accuracy', 'mae', auc_roc, recall, precision 
+                #    f1_measure
+                ])
         self.model.summary()
 
 
