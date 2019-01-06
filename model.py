@@ -46,6 +46,7 @@ def arg_parser():
     parser.add_argument('--sample_weights', type = lambda x: (str(x).lower() == 'true'), default = False)
     parser.add_argument('--class_weights', type = lambda x: (str(x).lower() == 'true'), default = False)
     parser.add_argument('--over_sampling', type = lambda x: (str(x).lower() == 'true'), default = False)
+    parser.add_argument('--sampling_strategy', type = str, default = 'minority')
 
     # deep clustering epochs
     parser.add_argument('--deep_clustering_epochs', type = int, default = 200)
@@ -341,7 +342,7 @@ class XRAY_model():
         
 
         if args.over_sampling:
-            ros = RandomOverSampler(sampling_strategy = 'minority', random_state=0)
+            ros = RandomOverSampler(sampling_strategy = args.sampling_strategy, random_state=0)
             X_train = np.reshape(np.array(X_train), (-1, 1))
             X_train, y_train = ros.fit_resample(X_train, y_train)
             X_train = list(np.reshape(X_train, -1))
