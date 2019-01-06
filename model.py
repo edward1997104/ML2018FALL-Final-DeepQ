@@ -342,7 +342,9 @@ class XRAY_model():
 
         if args.over_sampling:
             ros = RandomOverSampler(random_state=0)
+            X_train = np.reshape(np.array(X_train), (-1, 1))
             X_train, y_train = ros.fit_resample(X_train, y_train)
+            X_train = list(np.reshape(-1))
 
         sample_weights = class_weight.compute_sample_weight('balanced', y_train)
         if args.sample_weights:
