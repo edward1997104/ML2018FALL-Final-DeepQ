@@ -116,10 +116,10 @@ class Unsupervised_Generator(Sequence):
         X = np.array([cv2.resize(cv2.imread(file_name), dsize = self.reshaped_size) for file_name in batch_x])
         return X, keras.applications.inception_v3.preprocess_input(X)
 
-def load_train_data(train_img_folder = './data/data/images/', path = './data/ntu_final_2018/train.csv'):
+def load_train_data(train_img_folder = './data/data/images/', path = 'data/ntu_final_2018//train.csv'):
     
     # loading the dataset
-    train_df = pd.read_csv(path, engine='python')
+    train_df = pd.read_csv(path)
     train_df['Labels'].fillna(-1, inplace = True)
 
     img_idx, labels = train_df['Image Index'], train_df['Labels']
