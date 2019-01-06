@@ -350,7 +350,7 @@ class XRAY_model():
                 X_train = list(np.reshape(X_train, -1))
             else:
                 X_train, y_train = reweight_sample(X_train, y_train,
-                 per_class = 1000, n_time = args.sampling_ratio)
+                 per_class = 200, n_time = args.sampling_ratio)
 
 
         sample_weights = class_weight.compute_sample_weight('balanced', y_train)
@@ -360,7 +360,7 @@ class XRAY_model():
             training_gen = Training_Generator(X_train, y_train, self.batch_size, reshaped_size = self.input_dim[:-1])
         validation_gen = Training_Generator(X_test, y_test, self.batch_size, reshaped_size = self.input_dim[:-1])
         callbacks = [roc_auc_callback(training_gen, validation_gen),
-                    EarlyStopping(monitor='roc_auc_val', mode='max', verbose=1,
+                    EarlyStopping(monitor='val_binary_accuracy', mode='max', verbose=1,
                     patience = args.patience, restore_best_weights = True)]
 
         hist = self.model.fit_generator(
