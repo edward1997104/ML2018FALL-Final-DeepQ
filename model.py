@@ -17,6 +17,7 @@ from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ModelCheckpoint, CSVLogger, Callback
 import faiss
 from sklearn.utils import class_weight
+from imblearn.over_sampling import RandomOverSampler
 
 
 def calculating_class_weights(y_true):
@@ -44,6 +45,7 @@ def arg_parser():
     parser.add_argument('--using_gpu',  type = lambda x: (str(x).lower() == 'true'), default = True)
     parser.add_argument('--sample_weights', type = lambda x: (str(x).lower() == 'true'), default = False)
     parser.add_argument('--class_weights', type = lambda x: (str(x).lower() == 'true'), default = False)
+    parser.add_argument('--over_sampling', type = lambda x: (str(x).lower() == 'true'), default = False)
 
     # deep clustering epochs
     parser.add_argument('--deep_clustering_epochs', type = int, default = 200)
@@ -337,6 +339,11 @@ class XRAY_model():
             test_id = int(len(X_train) * validation_ratio)
             X_train, y_train, X_test, y_test = X_train[:-test_id], y_label[:-test_id], X_train[-test_id:], y_label[-test_id:]
         
+
+        if args.over_sampling:
+            ros = RandomOverSampler(random_state=0)
+            X_train, y_train = ros.fit_resample(X_train, y_train)
+
         sample_weights = class_weight.compute_sample_weight('balanced', y_train)
         if args.sample_weights:
             training_gen = Weighted_Training_Generator(X_train, y_train, sample_weights, self.batch_size, reshaped_size = self.input_dim[:-1])
