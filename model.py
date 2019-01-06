@@ -47,6 +47,7 @@ def arg_parser():
     parser.add_argument('--class_weights', type = lambda x: (str(x).lower() == 'true'), default = False)
     parser.add_argument('--over_sampling', type = lambda x: (str(x).lower() == 'true'), default = False)
     parser.add_argument('--sampling_strategy', type = str, default = 'minority')
+    parser.add_argument('--sampling_ratio', type = int, default = 14)
 
     # deep clustering epochs
     parser.add_argument('--deep_clustering_epochs', type = int, default = 200)
@@ -342,10 +343,15 @@ class XRAY_model():
         
 
         if args.over_sampling:
-            ros = RandomOverSampler(sampling_strategy = args.sampling_strategy, random_state=0)
-            X_train = np.reshape(np.array(X_train), (-1, 1))
-            X_train, y_train = ros.fit_resample(X_train, y_train)
-            X_train = list(np.reshape(X_train, -1))
+            if args.sampling_strategy != 'my_strategy':
+                ros = RandomOverSampler(sampling_strategy = args.sampling_strategy, random_state=0)
+                X_train = np.reshape(np.array(X_train), (-1, 1))
+                X_train, y_train = ros.fit_resample(X_train, y_train)
+                X_train = list(np.reshape(X_train, -1))
+            else:
+                X_train, y_train = reweight_sample(X_train, y_train,
+                 per_class = 1000, n_time = args.sampling_ratio)
+
 
         sample_weights = class_weight.compute_sample_weight('balanced', y_train)
         if args.sample_weights:

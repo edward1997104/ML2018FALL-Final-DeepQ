@@ -154,7 +154,7 @@ def load_train_data(train_img_folder = './data/data/images/', path = './data/ntu
     return label_img, labels_res, unlabel_img, label_to_imgs, img_flag
     
 
-def reweight_sample(image_filenames, labels, per_class = 2000):
+def reweight_sample(image_filenames, labels, per_class = 2000, n_time = 14):
 
     np.random.seed(42)
     result_filenames, result_labels = [], []
@@ -163,7 +163,7 @@ def reweight_sample(image_filenames, labels, per_class = 2000):
 
     print(indicies)
     cnt = 0
-    while cnt < int(per_class * 3):
+    while cnt < int(per_class * n_time):
         for i in indicies:
             result_filenames.append(image_filenames[i])
             result_labels.append(labels[i])
@@ -244,7 +244,7 @@ if __name__ == '__main__':
     X_train, y_label, unlabelled, label_to_imgs, img_flag = load_train_data()
     train_ids, test_ids = split_dataset(y_label, label_to_imgs, img_flag, test_ration=0.20)
 
-#    X_train, y_label = reweight_sample(X_train, y_label)
+    X_train, y_label = reweight_sample(X_train, y_label)
 
 #    positive_ratio = np.sum(y_label, axis = 0) / len(y_label)
 #    print(positive_ratio)
