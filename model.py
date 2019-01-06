@@ -17,7 +17,7 @@ from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ModelCheckpoint, CSVLogger, Callback
 import faiss
 from sklearn.utils import class_weight
-from imblearn.over_sampling import RandomOverSampler
+from imblearn.over_sampling import ADASYN, SMOTE, RandomOverSampler
 
 
 def calculating_class_weights(y_true):
@@ -343,7 +343,7 @@ class XRAY_model():
         if args.over_sampling:
             ros = RandomOverSampler(random_state=0)
             X_train = np.reshape(np.array(X_train), (-1, 1))
-            X_train, y_train = ros.fit_resample(X_train, y_train)
+            X_train, y_train = ADASYN.fit_resample(X_train, y_train)
             X_train = list(np.reshape(X_train, -1))
 
         sample_weights = class_weight.compute_sample_weight('balanced', y_train)
