@@ -360,7 +360,7 @@ class XRAY_model():
             training_gen = Training_Generator(X_train, y_train, self.batch_size, reshaped_size = self.input_dim[:-1])
         validation_gen = Training_Generator(X_test, y_test, self.batch_size, reshaped_size = self.input_dim[:-1])
         callbacks = [roc_auc_callback(training_gen, validation_gen),
-                    EarlyStopping(monitor='val_binary_accuracy', mode='max', verbose=1,
+                    EarlyStopping(monitor='val_loss', mode='max', verbose=1,
                     patience = args.patience, restore_best_weights = True)]
 
         hist = self.model.fit_generator(
