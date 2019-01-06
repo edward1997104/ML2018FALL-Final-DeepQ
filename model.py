@@ -54,6 +54,7 @@ def arg_parser():
     parser.add_argument("--fine_tune_auto", type = lambda x: (str(x).lower() == 'true'), default = False)
     parser.add_argument('--load_auto', type = lambda x: (str(x).lower() == 'true'), default = True)
     parser.add_argument('--load_auto_path', type = str, default = '10_autoencoder.h5')
+    parser.add_argument('--trained_epochs_auto', type = int, default = 70)
 
     # add position for saving
     parser.add_argument("--model", type=str, default = 'baseline.h5')
@@ -233,7 +234,7 @@ class XRAY_model():
 
             autoencoder.fit_generator(unlabelled_gen, epochs = args.auto_epochs)
 
-            autoencoder.save_weights(str(args.auto_epochs + 20) + '_autoencoder.h5')
+            autoencoder.save_weights(str(args.auto_epochs + args.trained_epochs_auto) + '_autoencoder.h5')
 
             print("Done training Autoencoder")
             autoencoder.trainable = args.fine_tune_auto
@@ -323,16 +324,18 @@ class XRAY_model():
 
         # fit the data
         print ("Start Training model")
-        X_train, y_label, _, _, _ = load_train_data()
+        X_train, y_label, unlabelled, label_to_imgs, img_flag = load_train_data()
         X_train, y_label = shuffle(X_train, y_label)
-        test_id = int(len(X_train) * validation_ratio)
-        X_train, y_train, X_test, y_test = X_train[:-test_id], y_label[:-test_id], X_train[-test_id:], y_label[-test_id:]
-        # train_ids, test_ids = split_dataset(y_label, label_to_imgs, img_flag, test_ration=validation_ratio)
-        # X_train, y_train, X_test, y_test = [X_train[train_id] for train_id in train_ids], y_label[train_ids],\
-        #                                     [ X_train[test_id] for test_id in test_ids], y_label[test_ids]
+
+
         
         if self.reweight:
-            X_train, y_train = reweight_sample(X_train, y_train, per_class = 1000)
+            train_ids, test_ids = split_dataset(y_label, label_to_imgs, img_flag, test_ration=validation_ratio)
+            X_train, y_train, X_test, y_test = [X_train[train_id] for train_id in train_ids], y_label[train_ids],\
+                                                [ X_train[test_id] for test_id in test_ids], y_label[test_ids]
+        else:
+            test_id = int(len(X_train) * validation_ratio)
+            X_train, y_train, X_test, y_test = X_train[:-test_id], y_label[:-test_id], X_train[-test_id:], y_label[-test_id:]
         
         sample_weights = class_weight.compute_sample_weight('balanced', y_train)
         if args.sample_weights:
