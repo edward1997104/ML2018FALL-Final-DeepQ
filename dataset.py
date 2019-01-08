@@ -240,11 +240,46 @@ def generate_batch(x, y, batch_size):
 def show_img(arr):
     plt.imshow(arr, cmap=plt.get_cmap('gray'))
 
+def load_binary_train(X_train, y_label):
+    num_class = y_label.shape[1]
+    num_data = y_label.shape[0]
+    y_labels = np.zeros((num_class, num_data, 1), dtype='int64')
+    for i in range(num_data):
+        for j in range(num_class):
+            y_labels[j, i, 0] = y_label[i, j]
+    
+    return y_labels
+
+
+def reweight_binary_sample(image_filenames, labels, per_class = 5000):
+
+    np.random.seed(42)
+    num_class = labels.shape[0]
+    image_filenames_by_class = [image_filenames.copy() for i in range(num_class)]
+
+    result_labels = labels.tolist()
+    
+    
+    for i in range(num_class):
+        indicies = np.where(labels[i] == 1)[0]
+        cnt = 0
+        while cnt < int(per_class):
+            rand_index = np.random.choice(indicies)
+            image_filenames_by_class[i].append(image_filenames[rand_index])
+            result_labels[i].append(labels[i][rand_index][0])
+            cnt += 1
+        print(len(image_filenames_by_class[i]))
+    
+    
+    return image_filenames_by_class, result_labels
+    
+
 if __name__ == '__main__':
     X_train, y_label, unlabelled, label_to_imgs, img_flag = load_train_data()
     train_ids, test_ids = split_dataset(y_label, label_to_imgs, img_flag, test_ration=0.20)
 
-    X_train, y_label = reweight_sample(X_train, y_label)
+    binary_labels = load_binary_train(X_train, y_label)
+    train_x, train_y = reweight_binary_sample(X_train, binary_labels)
 
 #    positive_ratio = np.sum(y_label, axis = 0) / len(y_label)
 #    print(positive_ratio)
