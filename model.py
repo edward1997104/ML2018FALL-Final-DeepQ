@@ -7,7 +7,7 @@ import keras.applications
 import keras.backend as K
 from sklearn.metrics import roc_curve, auc, roc_auc_score
 from sklearn.utils import shuffle
-from dataset import Training_Generator, Testing_Generator, Unsupervised_Generator, Weighted_Training_Generator, load_train_data, load_test_idxs, split_dataset, reweight_sample
+from dataset import Training_Generator, Testing_Generator, Unsupervised_Generator, Weighted_Training_Generator, load_train_data, load_test_idxs, split_dataset, reweight_sample, load_binary_train, reweight_binary_sample
 import tensorflow as tf
 import numpy as np
 from scipy import interp
@@ -251,7 +251,7 @@ class XRAY_model():
         output = Dropout(self.drop_out) (model_output)
         output = Dense(512, activation = activation, kernel_regularizer=regularizers.l2(kernel_l2))(output)
         output = Dropout(self.drop_out) (output)
-        output = Dense(self.output_dim, activation = 'sigmoid', kernel_regularizer=regularizers.l2(kernel_l2)) (output)
+        output = Dense(1, activation = 'sigmoid', kernel_regularizer=regularizers.l2(kernel_l2)) (output)
 
 
         auc_roc = as_keras_metric(tf.metrics.auc)
@@ -329,7 +329,10 @@ class XRAY_model():
         # fit the data
         print ("Start Training model")
         X_train, y_label, unlabelled, label_to_imgs, img_flag = load_train_data()
-        X_train, y_label = shuffle(X_train, y_label)
+        binary_labels = load_binary_train(X_train, y_label)
+        train_x, train_y = reweight_binary_sample(X_train, binary_labels)
+        class_for_train = 0
+        X_train, y_label = shuffle(train_x[class_for_train], train_y[class_for_train])
 
 
         

@@ -268,10 +268,12 @@ def reweight_binary_sample(image_filenames, labels, per_class = 5000):
             image_filenames_by_class[i].append(image_filenames[rand_index])
             result_labels[i].append(labels[i][rand_index][0])
             cnt += 1
-        print(len(image_filenames_by_class[i]))
+        # print(len(image_filenames_by_class[i]))
     
+    new_data_size = len(image_filenames_by_class[i])
+    result_labels = np.array(result_labels)
     
-    return image_filenames_by_class, result_labels
+    return image_filenames_by_class, result_labels.reshape((num_class, new_data_size, 1))
     
 
 if __name__ == '__main__':
