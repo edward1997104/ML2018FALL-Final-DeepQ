@@ -251,7 +251,7 @@ class XRAY_model():
         output = Dropout(self.drop_out) (model_output)
         output = Dense(512, activation = activation, kernel_regularizer=regularizers.l2(kernel_l2))(output)
         output = Dropout(self.drop_out) (output)
-        output = Dense(self.output_dim), activation = 'sigmoid', kernel_regularizer=regularizers.l2(kernel_l2)) (output)
+        output = Dense(self.output_dim, activation = 'sigmoid', kernel_regularizer=regularizers.l2(kernel_l2)) (output)
 
 
         auc_roc = as_keras_metric(tf.metrics.auc)
@@ -554,8 +554,7 @@ if __name__ == "__main__":
         model_type_list.append(used_model)
         preprocess_func_list.append(preprocess_func)
         
-    model = XRAY_model(model_type_list,
-                        preprocess_func_list = preprocess_func_list,
+    model = XRAY_model(model_type_list, preprocess_func_list = preprocess_func_list,
                         input_dim = (224,224,3), use_attn = True, learning_rate = args.learning_rate,
                         epochs = args.epochs, drop_out = args.drop_out, batch_size = args.batch_size,
                         activation = args.activation, fine_tune = args.fine_tune, kernel_l2 = args.kernel_l2,
